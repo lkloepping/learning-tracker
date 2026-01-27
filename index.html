@@ -54,7 +54,26 @@
 
   <!-- Main Content -->
   <main class="main-content">
-    <h2 class="section-title">Available Lessons</h2>
+    <!-- Course Tabs -->
+    <div class="course-tabs" id="courseTabs">
+      <!-- Tabs will be rendered here -->
+    </div>
+    
+    <!-- Course Info -->
+    <div class="course-header" id="courseHeader">
+      <div class="course-info">
+        <h2 class="course-title" id="courseTitle">Loading...</h2>
+        <p class="course-description" id="courseDescription"></p>
+      </div>
+      <div class="course-progress" id="courseProgress">
+        <span class="course-progress-text" id="courseProgressText">0/0 complete</span>
+        <div class="course-progress-bar">
+          <div class="course-progress-fill" id="courseProgressFill" style="width: 0%"></div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Lessons Grid -->
     <div class="lessons-grid" id="lessonsGrid">
       <!-- Lessons will be rendered here -->
       <div class="loading">

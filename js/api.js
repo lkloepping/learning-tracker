@@ -98,6 +98,20 @@ async function getUserProgress(userId) {
 }
 
 /**
+ * Get all courses from the Google Sheet
+ */
+async function getCourses() {
+  try {
+    const response = await fetch(`${GOOGLE_SCRIPT_URL}?action=getCourses`);
+    const data = await response.json();
+    return data.courses || [];
+  } catch (error) {
+    console.error('Error fetching courses:', error);
+    return getDefaultCourses();
+  }
+}
+
+/**
  * Get all lessons from the Google Sheet
  */
 async function getLessons() {
@@ -127,12 +141,33 @@ async function getAdminData() {
 }
 
 /**
+ * Default courses (used when Google Sheets is not configured)
+ */
+function getDefaultCourses() {
+  return [
+    {
+      id: 'course-1',
+      title: 'Getting Started',
+      description: 'Begin your learning journey with the fundamentals. This course covers the essential concepts you need to know.',
+      order: 1
+    },
+    {
+      id: 'course-2',
+      title: 'Advanced Topics',
+      description: 'Take your skills to the next level with advanced patterns and best practices.',
+      order: 2
+    }
+  ];
+}
+
+/**
  * Default lessons (used when Google Sheets is not configured)
  */
 function getDefaultLessons() {
   return [
     {
       id: 'lesson-1',
+      courseId: 'course-1',
       title: 'Introduction to Modern Development',
       description: 'Learn the fundamentals of modern software development practices, including agile methodologies and best practices. This lesson covers key concepts like version control, continuous integration, and collaborative development workflows that are essential for any modern development team.',
       category: 'Fundamentals',
@@ -144,6 +179,7 @@ function getDefaultLessons() {
     },
     {
       id: 'lesson-2',
+      courseId: 'course-1',
       title: 'Building Scalable Applications',
       description: 'Discover patterns and techniques for building applications that scale effectively with growing user demands. Learn about microservices architecture, load balancing, caching strategies, and database optimization techniques used by top tech companies.',
       category: 'Architecture',
@@ -152,6 +188,17 @@ function getDefaultLessons() {
         { title: 'Guide: Microservices Best Practices', url: 'https://docs.example.com/microservices' },
         { title: 'GitHub: Example Architecture', url: 'https://github.com/example/scalable-app' },
         { title: 'Video: Scaling 101', url: 'https://www.youtube.com/watch?v=example2' }
+      ]
+    },
+    {
+      id: 'lesson-3',
+      courseId: 'course-2',
+      title: 'Advanced Design Patterns',
+      description: 'Deep dive into software design patterns that help you write maintainable, flexible, and scalable code.',
+      category: 'Patterns',
+      order: 1,
+      links: [
+        { title: 'Design Patterns Guide', url: 'https://docs.example.com/patterns' }
       ]
     }
   ];
@@ -170,8 +217,10 @@ window.LearningAPI = {
   registerUser,
   findUserByEmail,
   getUserProgress,
+  getCourses,
   getLessons,
   getAdminData,
+  getDefaultCourses,
   getDefaultLessons,
   isApiConfigured
 };

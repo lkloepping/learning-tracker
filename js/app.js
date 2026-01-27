@@ -6,9 +6,11 @@
 // State Management
 // ============================================
 let currentUser = null;
+let courses = [];
 let lessons = [];
 let userProgress = {}; // { lessonId: { clicked: timestamp, completed: timestamp } }
 let currentLessonId = null; // Currently viewed lesson in modal
+let currentCourseId = null; // Currently selected course
 
 // ============================================
 // Initialization
@@ -33,22 +35,35 @@ async function initializeApp() {
   showLoading();
   
   try {
-    // Load lessons
+    // Load courses and lessons
     if (window.LearningAPI && window.LearningAPI.isApiConfigured()) {
+      courses = await window.LearningAPI.getCourses();
       lessons = await window.LearningAPI.getLessons();
       const progressData = await window.LearningAPI.getUserProgress(currentUser.id);
       processProgressData(progressData.events || []);
     } else {
-      // Use default lessons if API not configured
+      // Use default data if API not configured
+      courses = window.LearningAPI ? window.LearningAPI.getDefaultCourses() : getDefaultCoursesLocal();
       lessons = window.LearningAPI ? window.LearningAPI.getDefaultLessons() : getDefaultLessonsLocal();
       loadLocalProgress();
     }
     
+    // Set initial course
+    if (courses.length > 0 && !currentCourseId) {
+      currentCourseId = courses[0].id;
+    }
+    
+    renderCourseTabs();
+    renderCourseHeader();
     renderLessons();
     updateProgressOverview();
   } catch (error) {
     console.error('Error initializing app:', error);
+    courses = getDefaultCoursesLocal();
     lessons = getDefaultLessonsLocal();
+    if (courses.length > 0) currentCourseId = courses[0].id;
+    renderCourseTabs();
+    renderCourseHeader();
     renderLessons();
   }
 }
@@ -100,24 +115,95 @@ function showLoading() {
 }
 
 /**
- * Render all lesson cards
+ * Render course tabs
+ */
+function renderCourseTabs() {
+  const tabsContainer = document.getElementById('courseTabs');
+  
+  if (courses.length === 0) {
+    tabsContainer.style.display = 'none';
+    return;
+  }
+  
+  tabsContainer.style.display = 'flex';
+  tabsContainer.innerHTML = courses.map(course => {
+    const courseLessons = lessons.filter(l => l.courseId === course.id);
+    const completedCount = courseLessons.filter(l => userProgress[l.id]?.completed).length;
+    const isComplete = courseLessons.length > 0 && completedCount === courseLessons.length;
+    const isActive = course.id === currentCourseId;
+    
+    return `
+      <button class="course-tab ${isActive ? 'active' : ''} ${isComplete ? 'completed' : ''}" 
+              data-course-id="${course.id}"
+              onclick="selectCourse('${course.id}')">
+        ${escapeHtml(course.title)}
+        <span class="course-tab-progress">${completedCount}/${courseLessons.length}</span>
+      </button>
+    `;
+  }).join('');
+}
+
+/**
+ * Render course header info
+ */
+function renderCourseHeader() {
+  const course = courses.find(c => c.id === currentCourseId);
+  const headerEl = document.getElementById('courseHeader');
+  
+  if (!course) {
+    headerEl.style.display = 'none';
+    return;
+  }
+  
+  headerEl.style.display = 'flex';
+  
+  const courseLessons = lessons.filter(l => l.courseId === course.id);
+  const completedCount = courseLessons.filter(l => userProgress[l.id]?.completed).length;
+  const percentage = courseLessons.length > 0 ? Math.round((completedCount / courseLessons.length) * 100) : 0;
+  
+  document.getElementById('courseTitle').textContent = course.title;
+  document.getElementById('courseDescription').textContent = course.description || '';
+  document.getElementById('courseProgressText').textContent = `${completedCount}/${courseLessons.length} complete`;
+  document.getElementById('courseProgressFill').style.width = `${percentage}%`;
+}
+
+/**
+ * Select a course (switch tabs)
+ */
+function selectCourse(courseId) {
+  currentCourseId = courseId;
+  renderCourseTabs();
+  renderCourseHeader();
+  renderLessons();
+}
+
+/**
+ * Render all lesson cards for the current course
  */
 function renderLessons() {
   const grid = document.getElementById('lessonsGrid');
   
-  if (lessons.length === 0) {
+  // Filter lessons by current course
+  const courseLessons = currentCourseId 
+    ? lessons.filter(l => l.courseId === currentCourseId)
+    : lessons;
+  
+  if (courseLessons.length === 0) {
     grid.innerHTML = `
       <div class="empty-state" style="grid-column: 1 / -1;">
         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
         </svg>
-        <p>No lessons available yet.</p>
+        <p>No lessons available in this course yet.</p>
       </div>
     `;
     return;
   }
   
-  grid.innerHTML = lessons.map(lesson => renderLessonCard(lesson)).join('');
+  // Sort by order
+  courseLessons.sort((a, b) => (a.order || 0) - (b.order || 0));
+  
+  grid.innerHTML = courseLessons.map(lesson => renderLessonCard(lesson)).join('');
   
   // Add click handlers
   document.querySelectorAll('.lesson-card').forEach(card => {
@@ -418,6 +504,8 @@ async function handleComplete(lessonId) {
     saveLocalProgress();
     
     renderLessons();
+    renderCourseTabs(); // Update tab progress
+    renderCourseHeader(); // Update course progress
     updateProgressOverview();
     showToast('Lesson completed! Great work!', 'success');
   }
@@ -585,12 +673,33 @@ function escapeHtml(text) {
 }
 
 /**
+ * Default courses (local fallback)
+ */
+function getDefaultCoursesLocal() {
+  return [
+    {
+      id: 'course-1',
+      title: 'Getting Started',
+      description: 'Begin your learning journey with the fundamentals. This course covers the essential concepts you need to know.',
+      order: 1
+    },
+    {
+      id: 'course-2',
+      title: 'Advanced Topics',
+      description: 'Take your skills to the next level with advanced patterns and best practices.',
+      order: 2
+    }
+  ];
+}
+
+/**
  * Default lessons (local fallback)
  */
 function getDefaultLessonsLocal() {
   return [
     {
       id: 'lesson-1',
+      courseId: 'course-1',
       title: 'Introduction to Modern Development',
       description: 'Learn the fundamentals of modern software development practices, including agile methodologies and best practices. This lesson covers key concepts like version control, continuous integration, and collaborative development workflows that are essential for any modern development team.',
       category: 'Fundamentals',
@@ -602,6 +711,7 @@ function getDefaultLessonsLocal() {
     },
     {
       id: 'lesson-2',
+      courseId: 'course-1',
       title: 'Building Scalable Applications',
       description: 'Discover patterns and techniques for building applications that scale effectively with growing user demands. Learn about microservices architecture, load balancing, caching strategies, and database optimization techniques used by top tech companies.',
       category: 'Architecture',
@@ -611,6 +721,17 @@ function getDefaultLessonsLocal() {
         { title: 'GitHub: Example Architecture', url: 'https://github.com/example/scalable-app' },
         { title: 'Video: Scaling 101', url: 'https://www.youtube.com/watch?v=example2' }
       ]
+    },
+    {
+      id: 'lesson-3',
+      courseId: 'course-2',
+      title: 'Advanced Design Patterns',
+      description: 'Deep dive into software design patterns that help you write maintainable, flexible, and scalable code.',
+      category: 'Patterns',
+      order: 1,
+      links: [
+        { title: 'Design Patterns Guide', url: 'https://docs.example.com/patterns' }
+      ]
     }
   ];
 }
@@ -619,3 +740,4 @@ function getDefaultLessonsLocal() {
 window.handleLogout = handleLogout;
 window.closeLessonModal = closeLessonModal;
 window.handleModalComplete = handleModalComplete;
+window.selectCourse = selectCourse;

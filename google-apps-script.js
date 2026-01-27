@@ -27,6 +27,7 @@ const SPREADSHEET_ID = 'YOUR_SPREADSHEET_ID_HERE'; // Get this from the URL of y
 // Sheet names
 const USERS_SHEET = 'Users';
 const EVENTS_SHEET = 'Events';
+const COURSES_SHEET = 'Courses';
 const LESSONS_SHEET = 'Lessons';
 
 // ============================================
@@ -44,6 +45,9 @@ function doGet(e) {
   let result;
   
   switch (action) {
+    case 'getCourses':
+      result = getCourses();
+      break;
     case 'getLessons':
       result = getLessons();
       break;
@@ -101,6 +105,34 @@ function doPost(e) {
 // ============================================
 
 /**
+ * Get all courses
+ */
+function getCourses() {
+  const sheet = SpreadsheetApp.openById(SPREADSHEET_ID).getSheetByName(COURSES_SHEET);
+  if (!sheet) return { courses: [] };
+  
+  const data = sheet.getDataRange().getValues();
+  
+  const courses = [];
+  for (let i = 1; i < data.length; i++) {
+    const row = data[i];
+    if (row[0]) { // Has course_id
+      courses.push({
+        id: row[0],
+        title: row[1],
+        description: row[2],
+        order: row[3] || i
+      });
+    }
+  }
+  
+  // Sort by order
+  courses.sort((a, b) => a.order - b.order);
+  
+  return { courses };
+}
+
+/**
  * Get all lessons
  */
 function getLessons() {
@@ -112,23 +144,24 @@ function getLessons() {
   for (let i = 1; i < data.length; i++) {
     const row = data[i];
     if (row[0]) { // Has lesson_id
-      // Parse links from JSON string
+      // Parse links from JSON string (now in column 7, index 6)
       let links = [];
-      if (row[5]) {
+      if (row[6]) {
         try {
-          links = JSON.parse(row[5]);
+          links = JSON.parse(row[6]);
         } catch (e) {
           // If not valid JSON, try to parse as simple URL
-          links = [{ title: 'View Resource', url: row[5] }];
+          links = [{ title: 'View Resource', url: row[6] }];
         }
       }
       
       lessons.push({
         id: row[0],
-        title: row[1],
-        description: row[2],
-        category: row[3],
-        order: row[4] || i,
+        courseId: row[1],
+        title: row[2],
+        description: row[3],
+        category: row[4],
+        order: row[5] || i,
         links: links
       });
     }
@@ -317,17 +350,31 @@ function initializeSpreadsheet() {
   }
   eventsSheet.getRange(1, 1, 1, 5).setValues([['event_id', 'user_id', 'lesson_id', 'event_type', 'timestamp']]);
   
+  // Courses sheet
+  let coursesSheet = ss.getSheetByName(COURSES_SHEET);
+  if (!coursesSheet) {
+    coursesSheet = ss.insertSheet(COURSES_SHEET);
+  }
+  coursesSheet.getRange(1, 1, 1, 4).setValues([['course_id', 'title', 'description', 'order']]);
+  
+  // Add sample courses
+  coursesSheet.getRange(2, 1, 2, 4).setValues([
+    ['course-1', 'Getting Started', 'Begin your learning journey with the fundamentals.', 1],
+    ['course-2', 'Advanced Topics', 'Take your skills to the next level.', 2]
+  ]);
+  
   // Lessons sheet
   let lessonsSheet = ss.getSheetByName(LESSONS_SHEET);
   if (!lessonsSheet) {
     lessonsSheet = ss.insertSheet(LESSONS_SHEET);
   }
-  lessonsSheet.getRange(1, 1, 1, 6).setValues([['lesson_id', 'title', 'description', 'category', 'order', 'links']]);
+  lessonsSheet.getRange(1, 1, 1, 7).setValues([['lesson_id', 'course_id', 'title', 'description', 'category', 'order', 'links']]);
   
   // Add sample lessons with links
-  lessonsSheet.getRange(2, 1, 2, 6).setValues([
-    ['lesson-1', 'Introduction to Modern Development', 'Learn the fundamentals of modern software development practices, including agile methodologies and best practices. This lesson covers key concepts like version control, continuous integration, and collaborative development workflows.', 'Fundamentals', 1, '[{"title":"Video: Getting Started with Git","url":"https://www.youtube.com/watch?v=example1"},{"title":"Documentation: Agile Principles","url":"https://docs.example.com/agile"}]'],
-    ['lesson-2', 'Building Scalable Applications', 'Discover patterns and techniques for building applications that scale effectively with growing user demands. Learn about microservices architecture, load balancing, and caching strategies.', 'Architecture', 2, '[{"title":"Guide: Microservices Best Practices","url":"https://docs.example.com/microservices"},{"title":"GitHub: Example Architecture","url":"https://github.com/example/scalable-app"}]']
+  lessonsSheet.getRange(2, 1, 3, 7).setValues([
+    ['lesson-1', 'course-1', 'Introduction to Modern Development', 'Learn the fundamentals of modern software development practices.', 'Fundamentals', 1, '[{"title":"Video: Getting Started","url":"https://www.youtube.com/watch?v=example1"}]'],
+    ['lesson-2', 'course-1', 'Building Scalable Applications', 'Discover patterns and techniques for building scalable apps.', 'Architecture', 2, '[{"title":"Guide: Best Practices","url":"https://docs.example.com/guide"}]'],
+    ['lesson-3', 'course-2', 'Advanced Design Patterns', 'Deep dive into software design patterns.', 'Patterns', 1, '[{"title":"Patterns Guide","url":"https://docs.example.com/patterns"}]']
   ]);
   
   Logger.log('Spreadsheet initialized successfully!');
