@@ -48,18 +48,36 @@ async function initializeApp() {
       loadLocalProgress();
     }
     
+    console.log('=== LEARNING TRACKER DEBUG ===');
     console.log('Loaded courses:', courses);
     console.log('Loaded lessons:', lessons);
+    console.log('Courses count:', courses.length);
+    console.log('Lessons count:', lessons.length);
+    
+    // If no courses but we have lessons, try to infer courses from lessons
+    if (courses.length === 0 && lessons.length > 0) {
+      console.warn('No courses found, but lessons exist. Extracting courses from lessons...');
+      const uniqueCourseIds = [...new Set(lessons.map(l => l.courseId).filter(Boolean))];
+      courses = uniqueCourseIds.map((courseId, idx) => ({
+        id: courseId,
+        title: `Course ${idx + 1}`,
+        description: '',
+        order: idx + 1
+      }));
+      console.log('Inferred courses:', courses);
+    }
     
     // Set initial course
     if (courses.length > 0 && !currentCourseId) {
       currentCourseId = courses[0].id;
+      console.log('Set initial course:', currentCourseId);
     }
     
     renderCourseTabs();
     renderCourseHeader();
     renderLessons();
     updateProgressOverview();
+    console.log('=== END DEBUG ===');
   } catch (error) {
     console.error('Error initializing app:', error);
     courses = getDefaultCoursesLocal();
@@ -124,24 +142,29 @@ function renderCourseTabs() {
   const tabsContainer = document.getElementById('courseTabs');
   
   if (!tabsContainer) {
-    console.error('Course tabs container not found!');
+    console.error('❌ Course tabs container not found in DOM!');
     return;
   }
+  
+  console.log(`🎯 renderCourseTabs called with ${courses.length} courses`);
   
   if (courses.length === 0) {
-    console.warn('No courses to display');
+    console.warn('⚠️ No courses to display - hiding tabs');
     tabsContainer.style.display = 'none';
+    tabsContainer.innerHTML = '';
     return;
   }
   
-  console.log(`Rendering ${courses.length} course tabs`);
+  console.log(`✅ Rendering ${courses.length} course tabs`);
   
   tabsContainer.style.display = 'flex';
-  tabsContainer.innerHTML = courses.map(course => {
+  const tabsHTML = courses.map(course => {
     const courseLessons = lessons.filter(l => l.courseId === course.id);
     const completedCount = courseLessons.filter(l => userProgress[l.id]?.completed).length;
     const isComplete = courseLessons.length > 0 && completedCount === courseLessons.length;
     const isActive = course.id === currentCourseId;
+    
+    console.log(`  - Course: ${course.title} (${course.id}), Lessons: ${courseLessons.length}, Active: ${isActive}`);
     
     return `
       <button class="course-tab ${isActive ? 'active' : ''} ${isComplete ? 'completed' : ''}" 
@@ -152,6 +175,9 @@ function renderCourseTabs() {
       </button>
     `;
   }).join('');
+  
+  tabsContainer.innerHTML = tabsHTML;
+  console.log('✅ Tabs HTML rendered, container display:', window.getComputedStyle(tabsContainer).display);
 }
 
 /**
