@@ -48,6 +48,9 @@ async function initializeApp() {
       loadLocalProgress();
     }
     
+    console.log('Loaded courses:', courses);
+    console.log('Loaded lessons:', lessons);
+    
     // Set initial course
     if (courses.length > 0 && !currentCourseId) {
       currentCourseId = courses[0].id;
@@ -120,10 +123,18 @@ function showLoading() {
 function renderCourseTabs() {
   const tabsContainer = document.getElementById('courseTabs');
   
+  if (!tabsContainer) {
+    console.error('Course tabs container not found!');
+    return;
+  }
+  
   if (courses.length === 0) {
+    console.warn('No courses to display');
     tabsContainer.style.display = 'none';
     return;
   }
+  
+  console.log(`Rendering ${courses.length} course tabs`);
   
   tabsContainer.style.display = 'flex';
   tabsContainer.innerHTML = courses.map(course => {

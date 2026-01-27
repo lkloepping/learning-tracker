@@ -104,7 +104,15 @@ async function getCourses() {
   try {
     const response = await fetch(`${GOOGLE_SCRIPT_URL}?action=getCourses`);
     const data = await response.json();
-    return data.courses || [];
+    const courses = data.courses || [];
+    
+    // If no courses returned, use defaults
+    if (courses.length === 0) {
+      console.warn('No courses found in Google Sheet, using defaults');
+      return getDefaultCourses();
+    }
+    
+    return courses;
   } catch (error) {
     console.error('Error fetching courses:', error);
     return getDefaultCourses();
