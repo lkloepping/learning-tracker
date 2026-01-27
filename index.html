@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Learning Tracker | 3Pillar</title>
+  <link rel="stylesheet" href="css/styles.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+  <!-- Header -->
+  <header class="header">
+    <h1>Learning Tracker</h1>
+    <div class="header-user">
+      <span id="userDisplay">-</span>
+      <button onclick="handleLogout()">Switch User</button>
+      <a href="admin.html" class="nav-link">
+        <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
+          <path d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4zM3 10a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H4a1 1 0 01-1-1v-6zM14 9a1 1 0 00-1 1v6a1 1 0 001 1h2a1 1 0 001-1v-6a1 1 0 00-1-1h-2z"/>
+        </svg>
+        Admin Dashboard
+      </a>
+    </div>
+  </header>
+
+  <!-- Progress Overview -->
+  <div class="progress-overview">
+    <div class="progress-stats">
+      <div class="progress-bar-container">
+        <div class="progress-bar-label">
+          <span>Your Progress</span>
+          <span id="progressPercent">0%</span>
+        </div>
+        <div class="progress-bar">
+          <div class="progress-bar-fill" id="progressFill" style="width: 0%"></div>
+        </div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-number" id="completedCount">0</div>
+        <div class="stat-label">Completed</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-number" id="inProgressCount">0</div>
+        <div class="stat-label">In Progress</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-number" id="notStartedCount">0</div>
+        <div class="stat-label">Not Started</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main Content -->
+  <main class="main-content">
+    <h2 class="section-title">Available Lessons</h2>
+    <div class="lessons-grid" id="lessonsGrid">
+      <!-- Lessons will be rendered here -->
+      <div class="loading">
+        <div class="loading-spinner"></div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Name Input Modal -->
+  <div class="modal-overlay" id="nameModal">
+    <div class="modal">
+      <h2>Welcome!</h2>
+      <p>Enter your name to track your learning progress.</p>
+      <form onsubmit="handleNameSubmit(event)">
+        <input 
+          type="text" 
+          id="nameInput" 
+          placeholder="Your name" 
+          autocomplete="name"
+          required
+        >
+        <button type="submit">Get Started</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Lesson Detail Modal -->
+  <div class="modal-overlay" id="lessonModal">
+    <div class="modal lesson-modal">
+      <button class="modal-close" onclick="closeLessonModal()">&times;</button>
+      <span class="modal-category" id="modalCategory">Category</span>
+      <h2 id="modalTitle">Lesson Title</h2>
+      <p class="modal-description" id="modalDescription">Lesson description goes here.</p>
+      <div class="modal-links" id="modalLinks">
+        <!-- Links will be rendered here -->
+      </div>
+      <div class="modal-footer">
+        <button class="btn-complete-modal" id="modalCompleteBtn" onclick="handleModalComplete()">
+          Mark Complete
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification -->
+  <div class="toast" id="toast"></div>
+
+  <!-- Scripts -->
+  <script src="js/api.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
