@@ -274,7 +274,7 @@ function renderLessonCard(lesson) {
   return `
     <div class="${cardClass}" data-lesson-id="${lesson.id}">
       <div class="card-header">
-        <span class="card-category">${escapeHtml(lesson.category)}</span>
+        ${lesson.category ? `<span class="card-category">${escapeHtml(lesson.category)}</span>` : '<span class="card-category">General</span>'}
         <span class="card-status ${statusClass}">
           ${getStatusIcon(status)}
           ${status}
