@@ -44,7 +44,7 @@ async function trackEvent(userId, lessonId, eventType) {
 /**
  * Register a new user
  */
-async function registerUser(userId, name) {
+async function registerUser(userId, email, name) {
   try {
     const response = await fetch(GOOGLE_SCRIPT_URL, {
       method: 'POST',
@@ -55,16 +55,31 @@ async function registerUser(userId, name) {
       body: JSON.stringify({
         action: 'registerUser',
         userId: userId,
+        email: email,
         name: name,
         createdAt: new Date().toISOString()
       })
     });
     
-    console.log(`User registered: ${name}`);
+    console.log(`User registered: ${name} (${email})`);
     return true;
   } catch (error) {
     console.error('Error registering user:', error);
     return false;
+  }
+}
+
+/**
+ * Find existing user by email
+ */
+async function findUserByEmail(email) {
+  try {
+    const response = await fetch(`${GOOGLE_SCRIPT_URL}?action=findUserByEmail&email=${encodeURIComponent(email)}`);
+    const data = await response.json();
+    return data.user || null;
+  } catch (error) {
+    console.error('Error finding user by email:', error);
+    return null;
   }
 }
 
@@ -153,6 +168,7 @@ function isApiConfigured() {
 window.LearningAPI = {
   trackEvent,
   registerUser,
+  findUserByEmail,
   getUserProgress,
   getLessons,
   getAdminData,

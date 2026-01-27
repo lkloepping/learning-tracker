@@ -4,7 +4,7 @@
  * SETUP INSTRUCTIONS:
  * 1. Create a new Google Sheet with 3 tabs: "Users", "Events", "Lessons"
  * 2. Set up headers in each sheet:
- *    - Users: user_id | name | created_at
+ *    - Users: user_id | email | name | created_at
  *    - Events: event_id | user_id | lesson_id | event_type | timestamp
  *    - Lessons: lesson_id | title | description | category | order | links
  * 3. Add your lessons to the Lessons sheet
@@ -37,7 +37,9 @@ const LESSONS_SHEET = 'Lessons';
  * Handle GET requests (fetching data)
  */
 function doGet(e) {
-  const action = e.parameter.action;
+  // Handle missing parameters
+  const params = e && e.parameter ? e.parameter : {};
+  const action = params.action || 'getLessons';
   
   let result;
   
@@ -46,13 +48,16 @@ function doGet(e) {
       result = getLessons();
       break;
     case 'getUserProgress':
-      result = getUserProgress(e.parameter.userId);
+      result = getUserProgress(params.userId);
       break;
     case 'getAdminData':
       result = getAdminData();
       break;
+    case 'findUserByEmail':
+      result = findUserByEmail(params.email);
+      break;
     default:
-      result = { error: 'Unknown action' };
+      result = getLessons();
   }
   
   return ContentService
@@ -162,6 +167,34 @@ function getUserProgress(userId) {
 }
 
 /**
+ * Find user by email address
+ */
+function findUserByEmail(email) {
+  if (!email) return { user: null };
+  
+  const sheet = SpreadsheetApp.openById(SPREADSHEET_ID).getSheetByName(USERS_SHEET);
+  const data = sheet.getDataRange().getValues();
+  
+  const emailLower = email.toLowerCase().trim();
+  
+  for (let i = 1; i < data.length; i++) {
+    const row = data[i];
+    if (row[1] && row[1].toString().toLowerCase().trim() === emailLower) {
+      return {
+        user: {
+          id: row[0],
+          email: row[1],
+          name: row[2],
+          createdAt: row[3]
+        }
+      };
+    }
+  }
+  
+  return { user: null };
+}
+
+/**
  * Get all data for admin dashboard
  */
 function getAdminData() {
@@ -176,8 +209,9 @@ function getAdminData() {
     if (row[0]) {
       users.push({
         id: row[0],
-        name: row[1],
-        createdAt: row[2]
+        email: row[1],
+        name: row[2],
+        createdAt: row[3]
       });
     }
   }
@@ -215,22 +249,27 @@ function getAdminData() {
 function registerUser(data) {
   const sheet = SpreadsheetApp.openById(SPREADSHEET_ID).getSheetByName(USERS_SHEET);
   
-  // Check if user already exists
+  // Check if user already exists by email
   const existingData = sheet.getDataRange().getValues();
+  const emailLower = data.email ? data.email.toLowerCase().trim() : '';
+  
   for (let i = 1; i < existingData.length; i++) {
-    if (existingData[i][0] === data.userId) {
-      return { success: true, message: 'User already exists' };
+    // Check by user ID or email
+    if (existingData[i][0] === data.userId || 
+        (emailLower && existingData[i][1] && existingData[i][1].toString().toLowerCase().trim() === emailLower)) {
+      return { success: true, message: 'User already exists', userId: existingData[i][0] };
     }
   }
   
   // Add new user
   sheet.appendRow([
     data.userId,
+    data.email || '',
     data.name,
     data.createdAt || new Date().toISOString()
   ]);
   
-  return { success: true };
+  return { success: true, userId: data.userId };
 }
 
 /**
@@ -269,7 +308,7 @@ function initializeSpreadsheet() {
   if (!usersSheet) {
     usersSheet = ss.insertSheet(USERS_SHEET);
   }
-  usersSheet.getRange(1, 1, 1, 3).setValues([['user_id', 'name', 'created_at']]);
+  usersSheet.getRange(1, 1, 1, 4).setValues([['user_id', 'email', 'name', 'created_at']]);
   
   // Events sheet
   let eventsSheet = ss.getSheetByName(EVENTS_SHEET);

@@ -438,12 +438,16 @@ function handleLogout() {
 // ============================================
 
 /**
- * Show the name input modal
+ * Show the login modal
  */
 function showNameModal() {
   const modal = document.getElementById('nameModal');
   modal.classList.add('active');
-  document.getElementById('nameInput').focus();
+  document.getElementById('emailInput').focus();
+  // Reset form state
+  document.getElementById('loginHint').textContent = '';
+  document.getElementById('loginBtn').textContent = 'Continue';
+  document.getElementById('loginBtn').disabled = false;
 }
 
 /**
@@ -455,34 +459,90 @@ function hideNameModal() {
 }
 
 /**
- * Handle name form submission
+ * Handle login form submission
  */
-async function handleNameSubmit(e) {
+async function handleLoginSubmit(e) {
   e.preventDefault();
   
+  const emailInput = document.getElementById('emailInput');
   const nameInput = document.getElementById('nameInput');
+  const loginBtn = document.getElementById('loginBtn');
+  const loginHint = document.getElementById('loginHint');
+  
+  const email = emailInput.value.trim().toLowerCase();
   const name = nameInput.value.trim();
   
-  if (!name) {
-    nameInput.focus();
+  if (!email) {
+    emailInput.focus();
     return;
   }
   
-  // Create user
-  const userId = 'user_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-  currentUser = { id: userId, name: name };
+  // Disable button while checking
+  loginBtn.disabled = true;
+  loginBtn.textContent = 'Checking...';
+  loginHint.textContent = '';
   
-  // Save locally
-  localStorage.setItem('learningTrackerUser', JSON.stringify(currentUser));
-  
-  // Register with API
-  if (window.LearningAPI && window.LearningAPI.isApiConfigured()) {
-    await window.LearningAPI.registerUser(userId, name);
+  try {
+    // Check if user exists by email
+    let existingUser = null;
+    if (window.LearningAPI && window.LearningAPI.isApiConfigured()) {
+      existingUser = await window.LearningAPI.findUserByEmail(email);
+    }
+    
+    if (existingUser) {
+      // Existing user found - restore their session
+      currentUser = {
+        id: existingUser.id,
+        email: existingUser.email,
+        name: existingUser.name
+      };
+      localStorage.setItem('learningTrackerUser', JSON.stringify(currentUser));
+      
+      hideNameModal();
+      await initializeApp();
+      showToast(`Welcome back, ${currentUser.name}!`, 'success');
+    } else {
+      // New user - need a name
+      if (!name) {
+        loginHint.textContent = 'Looks like you\'re new! Please enter your name.';
+        loginHint.className = 'modal-hint info';
+        nameInput.focus();
+        nameInput.required = true;
+        loginBtn.disabled = false;
+        loginBtn.textContent = 'Get Started';
+        return;
+      }
+      
+      // Create new user
+      const userId = 'user_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+      currentUser = { id: userId, email: email, name: name };
+      
+      // Save locally
+      localStorage.setItem('learningTrackerUser', JSON.stringify(currentUser));
+      
+      // Register with API
+      if (window.LearningAPI && window.LearningAPI.isApiConfigured()) {
+        await window.LearningAPI.registerUser(userId, email, name);
+      }
+      
+      hideNameModal();
+      await initializeApp();
+      showToast(`Welcome, ${name}!`, 'success');
+    }
+  } catch (error) {
+    console.error('Login error:', error);
+    // Fallback: create local user
+    const userId = 'user_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+    currentUser = { id: userId, email: email, name: name || email.split('@')[0] };
+    localStorage.setItem('learningTrackerUser', JSON.stringify(currentUser));
+    
+    hideNameModal();
+    await initializeApp();
+    showToast(`Welcome, ${currentUser.name}!`, 'success');
   }
   
-  hideNameModal();
-  await initializeApp();
-  showToast(`Welcome, ${name}!`, 'success');
+  loginBtn.disabled = false;
+  loginBtn.textContent = 'Continue';
 }
 
 // ============================================

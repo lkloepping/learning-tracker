@@ -211,6 +211,7 @@ function renderUserCards() {
         <span class="user-card-name">${escapeHtml(user.name)}</span>
         <span class="user-card-stats">${user.completedCount}/${adminData.lessons.length} complete</span>
       </div>
+      ${user.email ? `<div style="font-size: 0.8rem; color: var(--dark-gray); margin-bottom: 0.75rem;">${escapeHtml(user.email)}</div>` : ''}
       <div class="progress-bar-container">
         <div class="progress-bar">
           <div class="progress-bar-fill" style="width: ${user.completionRate}%"></div>
@@ -307,7 +308,7 @@ function handleFilterChange() {
  * Export data to CSV
  */
 function exportToCSV() {
-  const rows = [['User Name', 'Lesson Title', 'Status', 'First Clicked', 'Completed At']];
+  const rows = [['User Name', 'Email', 'Lesson Title', 'Status', 'First Clicked', 'Completed At']];
   
   adminData.users.forEach(user => {
     adminData.lessons.forEach(lesson => {
@@ -316,6 +317,7 @@ function exportToCSV() {
       
       rows.push([
         user.name,
+        user.email || '',
         lesson.title,
         status,
         progress.clicked ? formatDateTime(progress.clicked) : '',

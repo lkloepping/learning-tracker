@@ -393,6 +393,26 @@ body {
   background: #2a3845;
 }
 
+.modal-hint {
+  font-size: 0.85rem;
+  color: var(--dark-gray);
+  margin-top: 1rem;
+  text-align: center;
+  min-height: 1.25rem;
+}
+
+.modal-hint.success {
+  color: var(--teal);
+}
+
+.modal-hint.info {
+  color: var(--bright-blue);
+}
+
+.modal input + input {
+  margin-top: 0.5rem;
+}
+
 /* Lesson Detail Modal */
 .lesson-modal {
   max-width: 560px;

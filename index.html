@@ -63,21 +63,28 @@
     </div>
   </main>
 
-  <!-- Name Input Modal -->
+  <!-- Login Modal -->
   <div class="modal-overlay" id="nameModal">
     <div class="modal">
       <h2>Welcome!</h2>
-      <p>Enter your name to track your learning progress.</p>
-      <form onsubmit="handleNameSubmit(event)">
+      <p>Enter your email to track your learning progress. If you've used this before, your progress will be restored.</p>
+      <form onsubmit="handleLoginSubmit(event)">
+        <input 
+          type="email" 
+          id="emailInput" 
+          placeholder="your.email@example.com" 
+          autocomplete="email"
+          required
+        >
         <input 
           type="text" 
           id="nameInput" 
-          placeholder="Your name" 
+          placeholder="Your name (for new users)" 
           autocomplete="name"
-          required
         >
-        <button type="submit">Get Started</button>
+        <button type="submit" id="loginBtn">Continue</button>
       </form>
+      <p class="modal-hint" id="loginHint"></p>
     </div>
   </div>
 
