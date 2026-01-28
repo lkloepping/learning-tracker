@@ -202,8 +202,10 @@ function renderDashboard() {
     `;
   }
   
-  // Populate user filter
+  // Populate filters
   populateUserFilter();
+  populateCourseFilter();
+  populateLessonFilter();
   
   // Render user cards
   renderUserCards();
@@ -223,6 +225,43 @@ function populateUserFilter() {
     const option = document.createElement('option');
     option.value = user.id;
     option.textContent = user.name;
+    select.appendChild(option);
+  });
+}
+
+/**
+ * Populate course filter dropdown
+ */
+function populateCourseFilter() {
+  const select = document.getElementById('courseFilter');
+  if (!select) return;
+  
+  select.innerHTML = '<option value="">All Courses</option>';
+  
+  // Get unique courses from lessons
+  const courses = [...new Map(adminData.lessons.map(lesson => [lesson.courseId, lesson.courseId])).values()];
+  
+  courses.forEach(courseId => {
+    const option = document.createElement('option');
+    option.value = courseId;
+    option.textContent = courseId || 'Uncategorized';
+    select.appendChild(option);
+  });
+}
+
+/**
+ * Populate lesson filter dropdown
+ */
+function populateLessonFilter() {
+  const select = document.getElementById('lessonFilter');
+  if (!select) return;
+  
+  select.innerHTML = '<option value="">All Lessons</option>';
+  
+  adminData.lessons.forEach(lesson => {
+    const option = document.createElement('option');
+    option.value = lesson.id;
+    option.textContent = lesson.title;
     select.appendChild(option);
   });
 }
@@ -260,7 +299,7 @@ function renderUserCards() {
 /**
  * Render the detailed data table
  */
-function renderDataTable() {
+function renderDataTable(courseFilter = '', lessonFilter = '', statusFilter = '', searchFilter = '') {
   const tbody = document.getElementById('tableBody');
   
   if (!tbody) {
@@ -272,13 +311,26 @@ function renderDataTable() {
   
   filteredData.forEach(user => {
     adminData.lessons.forEach(lesson => {
+      // Apply course filter
+      if (courseFilter && lesson.courseId !== courseFilter) {
+        return;
+      }
+      
+      // Apply lesson filter
+      if (lessonFilter && lesson.id !== lessonFilter) {
+        return;
+      }
+      
       const progress = user.progress[lesson.id] || {};
       const status = progress.completed ? 'completed' : (progress.clicked ? 'clicked' : 'not-started');
       const statusText = progress.completed ? 'Completed' : (progress.clicked ? 'In Progress' : 'Not Started');
       
       rows.push({
         userName: user.name,
+        userEmail: user.email || '',
         lessonTitle: lesson.title,
+        lessonId: lesson.id,
+        courseId: lesson.courseId,
         status,
         statusText,
         clickedAt: progress.clicked || null,
@@ -288,10 +340,21 @@ function renderDataTable() {
   });
   
   // Apply status filter
-  const statusFilter = document.getElementById('statusFilter').value;
-  const filteredRows = statusFilter 
+  let filteredRows = statusFilter 
     ? rows.filter(r => r.status === statusFilter)
     : rows;
+  
+  // Apply search filter to table rows
+  if (searchFilter) {
+    filteredRows = filteredRows.filter(row => {
+      const userName = row.userName?.toLowerCase() || '';
+      const userEmail = row.userEmail?.toLowerCase() || '';
+      const lessonTitle = row.lessonTitle?.toLowerCase() || '';
+      return userName.includes(searchFilter) || 
+             userEmail.includes(searchFilter) || 
+             lessonTitle.includes(searchFilter);
+    });
+  }
   
   tbody.innerHTML = filteredRows.map(row => `
     <tr>
@@ -323,7 +386,10 @@ function renderDataTable() {
  */
 function setupEventListeners() {
   document.getElementById('userFilter').addEventListener('change', handleFilterChange);
+  document.getElementById('courseFilter').addEventListener('change', handleFilterChange);
+  document.getElementById('lessonFilter').addEventListener('change', handleFilterChange);
   document.getElementById('statusFilter').addEventListener('change', handleFilterChange);
+  document.getElementById('searchFilter').addEventListener('input', handleFilterChange);
   document.getElementById('exportBtn').addEventListener('click', exportToCSV);
 }
 
@@ -332,15 +398,29 @@ function setupEventListeners() {
  */
 function handleFilterChange() {
   const userFilter = document.getElementById('userFilter').value;
+  const courseFilter = document.getElementById('courseFilter')?.value || '';
+  const lessonFilter = document.getElementById('lessonFilter')?.value || '';
+  const statusFilter = document.getElementById('statusFilter').value;
+  const searchFilter = document.getElementById('searchFilter')?.value.toLowerCase() || '';
   
+  // Filter users
   if (userFilter) {
     filteredData = adminData.users.filter(u => u.id === userFilter);
   } else {
     filteredData = [...adminData.users];
   }
   
+  // Apply search filter
+  if (searchFilter) {
+    filteredData = filteredData.filter(user => {
+      const userName = user.name?.toLowerCase() || '';
+      const userEmail = user.email?.toLowerCase() || '';
+      return userName.includes(searchFilter) || userEmail.includes(searchFilter);
+    });
+  }
+  
   renderUserCards();
-  renderDataTable();
+  renderDataTable(courseFilter, lessonFilter, statusFilter, searchFilter);
 }
 
 /**

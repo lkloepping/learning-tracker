@@ -744,6 +744,13 @@ body {
   border-radius: 6px;
   font-size: 0.9rem;
   background: var(--white);
+  min-width: 120px;
+}
+
+.admin-filters input[type="text"] {
+  min-width: 200px;
+  flex: 1;
+  max-width: 300px;
 }
 
 .admin-filters select:focus,
