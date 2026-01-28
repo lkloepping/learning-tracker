@@ -174,6 +174,34 @@ function renderDashboard() {
     return;
   }
   
+  // Restore the HTML structure if it was replaced by loading state
+  if (!document.getElementById('userCards')) {
+    container.innerHTML = `
+      <!-- User Cards -->
+      <div class="user-cards-grid" id="userCards">
+        <!-- User summary cards will be rendered here -->
+      </div>
+
+      <!-- Data Table -->
+      <div class="data-table-container">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>User</th>
+              <th>Lesson</th>
+              <th>Status</th>
+              <th>First Clicked</th>
+              <th>Completed At</th>
+            </tr>
+          </thead>
+          <tbody id="tableBody">
+            <!-- Table rows will be rendered here -->
+          </tbody>
+        </table>
+      </div>
+    `;
+  }
+  
   // Populate user filter
   populateUserFilter();
   
@@ -205,6 +233,11 @@ function populateUserFilter() {
 function renderUserCards() {
   const container = document.getElementById('userCards');
   
+  if (!container) {
+    console.error('userCards container not found');
+    return;
+  }
+  
   container.innerHTML = filteredData.map(user => `
     <div class="user-card">
       <div class="user-card-header">
@@ -229,6 +262,12 @@ function renderUserCards() {
  */
 function renderDataTable() {
   const tbody = document.getElementById('tableBody');
+  
+  if (!tbody) {
+    console.error('tableBody not found');
+    return;
+  }
+  
   const rows = [];
   
   filteredData.forEach(user => {
