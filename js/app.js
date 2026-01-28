@@ -35,12 +35,33 @@ async function initializeApp() {
   showLoading();
   
   try {
-    // Load courses and lessons
+    // Load courses and lessons (in parallel for speed)
     if (window.LearningAPI && window.LearningAPI.isApiConfigured()) {
-      courses = await window.LearningAPI.getCourses();
-      lessons = await window.LearningAPI.getLessons();
-      const progressData = await window.LearningAPI.getUserProgress(currentUser.id);
+      // Load courses and lessons in parallel (they don't depend on each other)
+      const [coursesData, lessonsData, progressData] = await Promise.all([
+        window.LearningAPI.getCourses(true), // useCache = true
+        window.LearningAPI.getLessons(true), // useCache = true
+        window.LearningAPI.getUserProgress(currentUser.id)
+      ]);
+      
+      courses = coursesData;
+      lessons = lessonsData;
       processProgressData(progressData.events || []);
+      
+      // Refresh cache in background (without blocking UI)
+      Promise.all([
+        window.LearningAPI.getCourses(false), // useCache = false to force refresh
+        window.LearningAPI.getLessons(false)  // useCache = false to force refresh
+      ]).then(([freshCourses, freshLessons]) => {
+        courses = freshCourses;
+        lessons = freshLessons;
+        // Re-render if needed
+        if (currentCourseId) {
+          renderCourseTabs();
+          renderCourseHeader();
+          renderLessons();
+        }
+      }).catch(err => console.log('Background refresh failed, using cache:', err));
     } else {
       // Use default data if API not configured
       courses = window.LearningAPI ? window.LearningAPI.getDefaultCourses() : getDefaultCoursesLocal();

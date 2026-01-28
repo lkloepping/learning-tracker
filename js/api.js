@@ -98,9 +98,23 @@ async function getUserProgress(userId) {
 }
 
 /**
- * Get all courses from the Google Sheet
+ * Get all courses from the Google Sheet (with caching)
  */
-async function getCourses() {
+async function getCourses(useCache = true) {
+  // Check cache first
+  if (useCache) {
+    const cached = localStorage.getItem('courses_cache');
+    const cacheTime = localStorage.getItem('courses_cache_time');
+    if (cached && cacheTime) {
+      const age = Date.now() - parseInt(cacheTime);
+      // Use cache if less than 5 minutes old
+      if (age < 5 * 60 * 1000) {
+        console.log('Using cached courses');
+        return JSON.parse(cached);
+      }
+    }
+  }
+  
   try {
     const response = await fetch(`${GOOGLE_SCRIPT_URL}?action=getCourses`);
     const data = await response.json();
@@ -109,27 +123,73 @@ async function getCourses() {
     // If no courses returned, use defaults
     if (courses.length === 0) {
       console.warn('No courses found in Google Sheet, using defaults');
-      return getDefaultCourses();
+      const defaults = getDefaultCourses();
+      // Cache defaults too
+      localStorage.setItem('courses_cache', JSON.stringify(defaults));
+      localStorage.setItem('courses_cache_time', Date.now().toString());
+      return defaults;
     }
+    
+    // Cache the results
+    localStorage.setItem('courses_cache', JSON.stringify(courses));
+    localStorage.setItem('courses_cache_time', Date.now().toString());
     
     return courses;
   } catch (error) {
     console.error('Error fetching courses:', error);
+    // Try to use cache even if expired on error
+    const cached = localStorage.getItem('courses_cache');
+    if (cached) {
+      console.log('Using expired cache due to error');
+      return JSON.parse(cached);
+    }
     return getDefaultCourses();
   }
 }
 
 /**
- * Get all lessons from the Google Sheet
+ * Get all lessons from the Google Sheet (with caching)
  */
-async function getLessons() {
+async function getLessons(useCache = true) {
+  // Check cache first
+  if (useCache) {
+    const cached = localStorage.getItem('lessons_cache');
+    const cacheTime = localStorage.getItem('lessons_cache_time');
+    if (cached && cacheTime) {
+      const age = Date.now() - parseInt(cacheTime);
+      // Use cache if less than 5 minutes old
+      if (age < 5 * 60 * 1000) {
+        console.log('Using cached lessons');
+        return JSON.parse(cached);
+      }
+    }
+  }
+  
   try {
     const response = await fetch(`${GOOGLE_SCRIPT_URL}?action=getLessons`);
     const data = await response.json();
-    return data.lessons || [];
+    const lessons = data.lessons || [];
+    
+    if (lessons.length === 0) {
+      const defaults = getDefaultLessons();
+      localStorage.setItem('lessons_cache', JSON.stringify(defaults));
+      localStorage.setItem('lessons_cache_time', Date.now().toString());
+      return defaults;
+    }
+    
+    // Cache the results
+    localStorage.setItem('lessons_cache', JSON.stringify(lessons));
+    localStorage.setItem('lessons_cache_time', Date.now().toString());
+    
+    return lessons;
   } catch (error) {
     console.error('Error fetching lessons:', error);
-    // Return default lessons if API fails
+    // Try to use cache even if expired on error
+    const cached = localStorage.getItem('lessons_cache');
+    if (cached) {
+      console.log('Using expired cache due to error');
+      return JSON.parse(cached);
+    }
     return getDefaultLessons();
   }
 }
@@ -219,6 +279,17 @@ function isApiConfigured() {
   return GOOGLE_SCRIPT_URL !== 'YOUR_GOOGLE_APPS_SCRIPT_URL_HERE';
 }
 
+/**
+ * Clear all cached data
+ */
+function clearCache() {
+  localStorage.removeItem('courses_cache');
+  localStorage.removeItem('courses_cache_time');
+  localStorage.removeItem('lessons_cache');
+  localStorage.removeItem('lessons_cache_time');
+  console.log('Cache cleared');
+}
+
 // Export for use in other modules
 window.LearningAPI = {
   trackEvent,
@@ -230,5 +301,6 @@ window.LearningAPI = {
   getAdminData,
   getDefaultCourses,
   getDefaultLessons,
+  clearCache,
   isApiConfigured
 };
