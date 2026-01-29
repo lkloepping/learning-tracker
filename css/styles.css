@@ -453,6 +453,30 @@ body {
   transform: none;
 }
 
+.btn-complete.is-saving {
+  pointer-events: none;
+  position: relative;
+  color: transparent;
+}
+
+.btn-complete.is-saving::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 18px;
+  height: 18px;
+  margin: -9px 0 0 -9px;
+  border: 2px solid var(--charcoal-blue);
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: btn-spin 0.7s linear infinite;
+}
+
+@keyframes btn-spin {
+  to { transform: rotate(360deg); }
+}
+
 /* Modal Styles */
 .modal-overlay {
   position: fixed;

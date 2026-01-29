@@ -487,15 +487,9 @@ function handleEscapeKey(e) {
 /**
  * Handle completion from modal
  */
-async function handleModalComplete() {
+function handleModalComplete() {
   if (currentLessonId) {
-    await handleComplete(currentLessonId);
-    
-    // Update modal button
-    const completeBtn = document.getElementById('modalCompleteBtn');
-    completeBtn.textContent = '✓ Completed';
-    completeBtn.classList.add('is-completed');
-    completeBtn.disabled = true;
+    handleComplete(currentLessonId);
   }
 }
 
@@ -539,33 +533,60 @@ function truncateUrl(url) {
 /**
  * Handle completion button click
  */
-async function handleComplete(lessonId) {
+function handleComplete(lessonId) {
   if (!userProgress[lessonId]) {
     userProgress[lessonId] = {};
   }
   
   if (!userProgress[lessonId].completed) {
-    // Also mark as clicked if not already
+    // Remember if we need to send 'clicked' (before we set it)
+    const needClickedEvent = !userProgress[lessonId].clicked;
+    
+    // Show spinner on all complete buttons for this lesson
+    const buttons = document.querySelectorAll(`.btn-complete[data-lesson-id="${lessonId}"], #modalCompleteBtn`);
+    buttons.forEach(btn => {
+      btn.classList.add('is-saving');
+      btn.disabled = true;
+    });
+    
+    // Optimistic update: apply state immediately
+    const now = new Date().toISOString();
     if (!userProgress[lessonId].clicked) {
-      userProgress[lessonId].clicked = new Date().toISOString();
-      if (window.LearningAPI && window.LearningAPI.isApiConfigured()) {
-        await window.LearningAPI.trackEvent(currentUser.id, lessonId, 'clicked');
-      }
+      userProgress[lessonId].clicked = now;
     }
-    
-    userProgress[lessonId].completed = new Date().toISOString();
-    
-    // Track event
-    if (window.LearningAPI && window.LearningAPI.isApiConfigured()) {
-      await window.LearningAPI.trackEvent(currentUser.id, lessonId, 'completed');
-    }
+    userProgress[lessonId].completed = now;
     saveLocalProgress();
     
+    // Update UI immediately (no wait for API)
     renderLessons();
-    renderCourseTabs(); // Update tab progress
-    renderCourseHeader(); // Update course progress
+    renderCourseTabs();
+    renderCourseHeader();
     updateProgressOverview();
+    
+    // Update modal button if modal is open (re-render doesn't touch modal)
+    const modalCompleteBtn = document.getElementById('modalCompleteBtn');
+    if (modalCompleteBtn && currentLessonId === lessonId) {
+      modalCompleteBtn.classList.remove('is-saving');
+      modalCompleteBtn.textContent = '✓ Completed';
+      modalCompleteBtn.classList.add('is-completed');
+      modalCompleteBtn.disabled = true;
+    }
+    
     showToast('Lesson completed! Great work!', 'success');
+    
+    // Fire API in background (don't block UI)
+    if (window.LearningAPI && window.LearningAPI.isApiConfigured()) {
+      const api = window.LearningAPI;
+      const userId = currentUser.id;
+      
+      Promise.all([
+        needClickedEvent ? api.trackEvent(userId, lessonId, 'clicked') : Promise.resolve(),
+        api.trackEvent(userId, lessonId, 'completed')
+      ]).catch(err => {
+        console.error('Failed to sync completion:', err);
+        showToast('Saved locally. Sync may retry later.', 'info');
+      });
+    }
   }
 }
 
