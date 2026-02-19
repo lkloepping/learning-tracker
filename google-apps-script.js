@@ -29,6 +29,7 @@ const USERS_SHEET = 'Users';
 const EVENTS_SHEET = 'Events';
 const COURSES_SHEET = 'Courses';
 const LESSONS_SHEET = 'Lessons';
+const ROSTER_SHEET = 'Roster';
 
 // ============================================
 // Web App Entry Points
@@ -266,13 +267,47 @@ function getAdminData() {
     }
   }
   
-  // Get lessons
+  // Get lessons and courses
   const lessonsResult = getLessons();
+  const coursesResult = getCourses();
+  
+  // Get roster (email, name, status - for executive reporting)
+  let roster = [];
+  try {
+    const rosterSheet = ss.getSheetByName(ROSTER_SHEET);
+    if (rosterSheet) {
+      const rosterData = rosterSheet.getDataRange().getValues();
+      const header = rosterData[0] || [];
+      const emailCol = header.map(h => String(h).toLowerCase()).indexOf('email');
+      const nameCol = header.map(h => String(h).toLowerCase()).indexOf('name');
+      const statusCol = header.map(h => String(h).toLowerCase()).indexOf('status');
+      const practiceCol = header.map(h => String(h).toLowerCase()).indexOf('practice');
+      for (let i = 1; i < rosterData.length; i++) {
+        const row = rosterData[i];
+        const email = (emailCol >= 0 ? row[emailCol] : row[0]) || '';
+        const name = (nameCol >= 0 ? row[nameCol] : row[1]) || '';
+        const status = (statusCol >= 0 ? row[statusCol] : row[2]) || '';
+        const practice = (practiceCol >= 0 ? row[practiceCol] : '') || '';
+        if (email) {
+          roster.push({
+            email: String(email).trim().toLowerCase(),
+            name: String(name).trim(),
+            status: String(status).trim(),
+            practice: String(practice).trim()
+          });
+        }
+      }
+    }
+  } catch (e) {
+    Logger.log('Roster sheet not found or error: ' + e);
+  }
   
   return {
     users,
     events,
-    lessons: lessonsResult.lessons
+    lessons: lessonsResult.lessons,
+    courses: coursesResult.courses || [],
+    roster
   };
 }
 

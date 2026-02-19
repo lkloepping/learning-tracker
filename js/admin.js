@@ -8,9 +8,11 @@
 let adminData = {
   users: [],
   events: [],
-  lessons: []
+  lessons: [],
+  roster: []
 };
 let filteredData = [];
+let executiveReport = { byCourse: [], byLesson: [] };
 
 // ============================================
 // Initialization
@@ -47,6 +49,7 @@ async function loadAdminData() {
 function loadLocalAdminData() {
   const users = [];
   const events = [];
+  const roster = [];
   const lessons = window.LearningAPI ? window.LearningAPI.getDefaultLessons() : [
     { id: 'lesson-1', title: 'Introduction to Modern Development', category: 'Fundamentals' },
     { id: 'lesson-2', title: 'Building Scalable Applications', category: 'Architecture' }
@@ -104,7 +107,7 @@ function loadLocalAdminData() {
     } catch (e) {}
   }
   
-  return { users, events, lessons };
+  return { users, events, lessons, courses: [], roster };
 }
 
 /**
@@ -138,6 +141,114 @@ function processData() {
   });
   
   filteredData = [...adminData.users];
+  
+  // Build executive report (roster-based completion %)
+  computeExecutiveReport();
+}
+
+/**
+ * Get roster filtered by practice and status
+ */
+function getFilteredRoster() {
+  const practiceFilter = document.getElementById('rosterPracticeFilter');
+  const statusFilter = document.getElementById('rosterStatusFilter');
+  const practiceValue = practiceFilter ? practiceFilter.value : '';
+  const statusValue = statusFilter ? statusFilter.value : '';
+  let roster = adminData.roster || [];
+  if (practiceValue) {
+    roster = roster.filter(r => (r.practice || '').trim() === practiceValue);
+  }
+  if (statusValue) {
+    roster = roster.filter(r => (r.status || '').trim() === statusValue);
+  }
+  return roster;
+}
+
+/**
+ * Compute completion rates by roster (for executive report)
+ */
+function computeExecutiveReport() {
+  const roster = getFilteredRoster();
+  const emailToUser = {};
+  (adminData.users || []).forEach(u => {
+    const email = (u.email || '').toString().trim().toLowerCase();
+    if (email) emailToUser[email] = u;
+  });
+  
+  const n = roster.length;
+  executiveReport = { byCourse: [], byLesson: [], rosterSize: n };
+  
+  if (n === 0) {
+    return;
+  }
+  
+  // Group lessons by course
+  const lessonsByCourse = {};
+  (adminData.lessons || []).forEach(lesson => {
+    const cid = lesson.courseId || 'Uncategorized';
+    if (!lessonsByCourse[cid]) lessonsByCourse[cid] = [];
+    lessonsByCourse[cid].push(lesson);
+  });
+  
+  // By course
+  Object.keys(lessonsByCourse).forEach(courseId => {
+    const courseLessons = lessonsByCourse[courseId];
+    const courseName = courseId;
+    let completed = 0, inProgress = 0, notStarted = 0;
+    roster.forEach(r => {
+      const user = emailToUser[r.email];
+      if (!user) {
+        notStarted++;
+        return;
+      }
+      const completedInCourse = courseLessons.filter(l => user.progress[l.id] && user.progress[l.id].completed).length;
+      const startedInCourse = courseLessons.filter(l => user.progress[l.id] && user.progress[l.id].clicked).length;
+      if (completedInCourse === courseLessons.length) completed++;
+      else if (startedInCourse > 0) inProgress++;
+      else notStarted++;
+    });
+    const course = (adminData.courses || []).find(c => c.id === courseId);
+    const courseName = course ? course.title : courseId;
+    executiveReport.byCourse.push({
+      courseId,
+      courseName,
+      rosterN: n,
+      pctCompleted: Math.round((completed / n) * 100),
+      pctInProgress: Math.round((inProgress / n) * 100),
+      pctNotStarted: Math.round((notStarted / n) * 100),
+      completed,
+      inProgress,
+      notStarted
+    });
+  });
+  
+  // By lesson
+  (adminData.lessons || []).forEach(lesson => {
+    let completed = 0, inProgress = 0, notStarted = 0;
+    roster.forEach(r => {
+      const user = emailToUser[r.email];
+      if (!user) {
+        notStarted++;
+        return;
+      }
+      const p = user.progress[lesson.id] || {};
+      if (p.completed) completed++;
+      else if (p.clicked) inProgress++;
+      else notStarted++;
+    });
+    executiveReport.byLesson.push({
+      lessonId: lesson.id,
+      lessonTitle: lesson.title,
+      courseId: lesson.courseId || 'Uncategorized',
+      rosterN: n,
+      pctCompleted: Math.round((completed / n) * 100),
+      pctInProgress: Math.round((inProgress / n) * 100),
+      pctNotStarted: Math.round((notStarted / n) * 100),
+      completed,
+      inProgress,
+      notStarted
+    });
+  });
 }
 
 // ============================================
@@ -177,11 +288,36 @@ function renderDashboard() {
   // Restore the HTML structure if it was replaced by loading state
   if (!document.getElementById('userCards')) {
     container.innerHTML = `
+      <!-- Executive Report -->
+      <section class="executive-report-section" id="executiveReportSection">
+        <h2 class="section-title">Executive Summary (by Roster)</h2>
+        <div class="executive-filters">
+          <label>Practice:</label>
+          <select id="rosterPracticeFilter"><option value="">All practices</option></select>
+          <label>Roster status:</label>
+          <select id="rosterStatusFilter"><option value="">All on roster</option></select>
+          <button class="btn-export" id="exportExecutiveBtn">Export Executive Report (CSV)</button>
+        </div>
+        <p class="executive-roster-size" id="executiveRosterSize"></p>
+        <div class="report-tables">
+          <div class="data-table-container">
+            <h3>By Course</h3>
+            <table class="data-table" id="executiveCourseTable">
+              <thead><tr><th>Course</th><th>Roster N</th><th>% Completed</th><th>% In Progress</th><th>% Not Started</th></tr></thead>
+              <tbody id="executiveCourseBody"></tbody>
+            </table>
+          </div>
+          <div class="data-table-container">
+            <h3>By Lesson</h3>
+            <table class="data-table" id="executiveLessonTable">
+              <thead><tr><th>Lesson</th><th>Course</th><th>Roster N</th><th>% Completed</th><th>% In Progress</th><th>% Not Started</th></tr></thead>
+              <tbody id="executiveLessonBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
       <!-- User Cards -->
-      <div class="user-cards-grid" id="userCards">
-        <!-- User summary cards will be rendered here -->
-      </div>
-
+      <div class="user-cards-grid" id="userCards"></div>
       <!-- Data Table -->
       <div class="data-table-container">
         <table class="data-table">
@@ -194,18 +330,26 @@ function renderDashboard() {
               <th>Completed At</th>
             </tr>
           </thead>
-          <tbody id="tableBody">
-            <!-- Table rows will be rendered here -->
-          </tbody>
+          <tbody id="tableBody"></tbody>
         </table>
       </div>
     `;
+    document.getElementById('exportExecutiveBtn').addEventListener('click', exportExecutiveReport);
+    const rosterStatusEl = document.getElementById('rosterStatusFilter');
+    const rosterPracticeEl = document.getElementById('rosterPracticeFilter');
+    if (rosterStatusEl) rosterStatusEl.addEventListener('change', () => { computeExecutiveReport(); renderExecutiveReport(); });
+    if (rosterPracticeEl) rosterPracticeEl.addEventListener('change', () => { computeExecutiveReport(); renderExecutiveReport(); });
   }
   
   // Populate filters
   populateUserFilter();
   populateCourseFilter();
   populateLessonFilter();
+  populateRosterStatusFilter();
+  populateRosterPracticeFilter();
+  
+  // Render executive report (roster-based)
+  renderExecutiveReport();
   
   // Render user cards
   renderUserCards();
@@ -264,6 +408,134 @@ function populateLessonFilter() {
     option.textContent = lesson.title;
     select.appendChild(option);
   });
+}
+
+/**
+ * Populate roster status filter from roster data
+ */
+function populateRosterStatusFilter() {
+  const select = document.getElementById('rosterStatusFilter');
+  if (!select) return;
+  
+  const statuses = [...new Set((adminData.roster || []).map(r => (r.status || '').trim()).filter(Boolean))].sort();
+  select.innerHTML = '<option value="">All on roster</option>';
+  statuses.forEach(s => {
+    const option = document.createElement('option');
+    option.value = s;
+    option.textContent = s;
+    select.appendChild(option);
+  });
+}
+
+/**
+ * Populate roster practice filter from roster data
+ */
+function populateRosterPracticeFilter() {
+  const select = document.getElementById('rosterPracticeFilter');
+  if (!select) return;
+  
+  const practices = [...new Set((adminData.roster || []).map(r => (r.practice || '').trim()).filter(Boolean))].sort();
+  select.innerHTML = '<option value="">All practices</option>';
+  practices.forEach(p => {
+    const option = document.createElement('option');
+    option.value = p;
+    option.textContent = p;
+    select.appendChild(option);
+  });
+}
+
+/**
+ * Render executive report tables
+ */
+function renderExecutiveReport() {
+  const section = document.getElementById('executiveReportSection');
+  const sizeEl = document.getElementById('executiveRosterSize');
+  const courseBody = document.getElementById('executiveCourseBody');
+  const lessonBody = document.getElementById('executiveLessonBody');
+  
+  if (!section) return;
+  
+  const n = executiveReport.rosterSize || 0;
+  if (n === 0) {
+    section.style.display = 'none';
+    return;
+  }
+  
+  section.style.display = 'block';
+  if (sizeEl) {
+    const practiceFilter = document.getElementById('rosterPracticeFilter');
+    const statusFilter = document.getElementById('rosterStatusFilter');
+    const practiceLabel = practiceFilter && practiceFilter.value ? ` Practice: ${practiceFilter.value}` : '';
+    const statusLabel = statusFilter && statusFilter.value ? ` Status: ${statusFilter.value}` : '';
+    const filterLabel = (practiceLabel || statusLabel) ? ` —${practiceLabel}${statusLabel}` : '';
+    sizeEl.textContent = `Roster size: ${n}${filterLabel}. Completion rates below are % of this roster.`;
+  }
+  
+  if (courseBody) {
+    courseBody.innerHTML = executiveReport.byCourse.map(row => `
+      <tr>
+        <td>${escapeHtml(row.courseName)}</td>
+        <td>${row.rosterN}</td>
+        <td>${row.pctCompleted}%</td>
+        <td>${row.pctInProgress}%</td>
+        <td>${row.pctNotStarted}%</td>
+      </tr>
+    `).join('');
+  }
+  
+  if (lessonBody) {
+    lessonBody.innerHTML = executiveReport.byLesson.map(row => {
+      const course = (adminData.courses || []).find(c => c.id === row.courseId);
+      const courseName = course ? course.title : row.courseId;
+      return `
+        <tr>
+          <td>${escapeHtml(row.lessonTitle)}</td>
+          <td>${escapeHtml(courseName)}</td>
+          <td>${row.rosterN}</td>
+          <td>${row.pctCompleted}%</td>
+          <td>${row.pctInProgress}%</td>
+          <td>${row.pctNotStarted}%</td>
+        </tr>
+      `;
+    }).join('');
+  }
+}
+
+/**
+ * Export executive report as CSV for monthly reporting
+ */
+function exportExecutiveReport() {
+  const practiceFilter = document.getElementById('rosterPracticeFilter');
+  const statusFilter = document.getElementById('rosterStatusFilter');
+  const practiceLabel = practiceFilter && practiceFilter.value ? practiceFilter.value.replace(/\s+/g, '-') : 'All';
+  const statusLabel = statusFilter && statusFilter.value ? statusFilter.value.replace(/\s+/g, '-') : 'All';
+  const date = new Date().toISOString().split('T')[0];
+  
+  const rows = [
+    ['Executive Learning Report', date, 'Practice: ' + (practiceFilter && practiceFilter.value ? practiceFilter.value : 'All'), 'Status: ' + (statusFilter && statusFilter.value ? statusFilter.value : 'All'), 'Roster N: ' + (executiveReport.rosterSize || 0)],
+    [],
+    ['By Course', '', '', '', ''],
+    ['Course', 'Roster N', '% Completed', '% In Progress', '% Not Started'],
+    ...executiveReport.byCourse.map(r => [r.courseName, r.rosterN, r.pctCompleted + '%', r.pctInProgress + '%', r.pctNotStarted + '%']),
+    [],
+    ['By Lesson', '', '', '', '', ''],
+    ['Lesson', 'Course', 'Roster N', '% Completed', '% In Progress', '% Not Started'],
+    ...executiveReport.byLesson.map(r => {
+      const course = (adminData.courses || []).find(c => c.id === r.courseId);
+      return [r.lessonTitle, course ? course.title : r.courseId, r.rosterN, r.pctCompleted + '%', r.pctInProgress + '%', r.pctNotStarted + '%'];
+    })
+  ];
+  
+  const csvContent = rows.map(row =>
+    row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(',')
+  ).join('\n');
+  
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = `learning-executive-report-${date}-${practiceLabel}-${statusLabel}.csv`;
+  link.click();
+  showToast('Executive report exported', 'success');
 }
 
 /**
@@ -391,6 +663,13 @@ function setupEventListeners() {
   document.getElementById('statusFilter').addEventListener('change', handleFilterChange);
   document.getElementById('searchFilter').addEventListener('input', handleFilterChange);
   document.getElementById('exportBtn').addEventListener('click', exportToCSV);
+  
+  const rosterStatusFilter = document.getElementById('rosterStatusFilter');
+  const rosterPracticeFilter = document.getElementById('rosterPracticeFilter');
+  if (rosterStatusFilter) rosterStatusFilter.addEventListener('change', () => { computeExecutiveReport(); renderExecutiveReport(); });
+  if (rosterPracticeFilter) rosterPracticeFilter.addEventListener('change', () => { computeExecutiveReport(); renderExecutiveReport(); });
+  const exportExec = document.getElementById('exportExecutiveBtn');
+  if (exportExec) exportExec.addEventListener('click', exportExecutiveReport);
 }
 
 /**

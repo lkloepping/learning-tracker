@@ -8,7 +8,8 @@ A beautiful, interactive learning progress tracker with Google Sheets backend fo
 - **User Tracking**: Simple name input with persistent sessions
 - **Progress Dashboard**: Visual progress bar and statistics
 - **Admin Dashboard**: View all user progress, filter by user/status
-- **CSV Export**: One-click export of all learning analytics
+- **Executive Report**: Roster-based completion % by course and lesson for monthly reporting
+- **CSV Export**: One-click export of learning analytics and executive report
 - **3Pillar Branding**: Uses official color palette and typography
 
 ## Quick Start (Demo Mode)
@@ -103,6 +104,26 @@ const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/YOUR_DEPLOYMENT_ID
 1. Create account at netlify.com or vercel.com
 2. Connect to GitHub or drag-drop the folder
 3. Get a free URL or connect your domain
+
+## Roster Sheet (Executive Report)
+
+For L&D monthly reporting, add a **Roster** sheet to your Google Sheet. The admin dashboard will show completion rates as **% of roster** (e.g. "50% of roster completed Course X").
+
+**Roster sheet** (Row 1 = headers):
+| email | name | status | practice |
+|-------|------|--------|----------|
+| person@company.com | Jane Doe | Active Employee | Product Management |
+| ux@company.com | Alex Lee | Active Employee | User Experience Research |
+
+- **email**: Must match the email learners use when logging in (used to match roster to progress).
+- **name**: Display name.
+- **status**: e.g. "Active Employee", "Contractor", "On Leave". Filter the report by status (e.g. Active only).
+- **practice**: e.g. "Product Management", "User Experience Research". Filter the report by practice so you can see completion rates for each practice separately.
+
+The **Executive Summary** on the admin page shows:
+- **By Course**: % of roster Completed / In Progress / Not Started per course.
+- **By Lesson**: Same per lesson.
+- **Export Executive Report (CSV)**: One-click download for your monthly report.
 
 ## Adding New Lessons
 

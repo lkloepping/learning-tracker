@@ -61,6 +61,64 @@
     </div>
 
     <div id="dashboardContent">
+      <!-- Executive Report (Roster-based) -->
+      <section class="executive-report-section" id="executiveReportSection">
+        <h2 class="section-title">Executive Summary (by Roster)</h2>
+        <div class="executive-filters">
+          <label>Practice:</label>
+          <select id="rosterPracticeFilter">
+            <option value="">All practices</option>
+          </select>
+          <label>Roster status:</label>
+          <select id="rosterStatusFilter">
+            <option value="">All on roster</option>
+            <option value="Active Employee">Active Employee</option>
+            <option value="Contractor">Contractor</option>
+            <option value="On Leave">On Leave</option>
+          </select>
+          <button class="btn-export" id="exportExecutiveBtn">
+            <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
+              <path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd"/>
+            </svg>
+            Export Executive Report (CSV)
+          </button>
+        </div>
+        <p class="executive-roster-size" id="executiveRosterSize"></p>
+        <div class="report-tables">
+          <div class="data-table-container">
+            <h3>By Course</h3>
+            <table class="data-table" id="executiveCourseTable">
+              <thead>
+                <tr>
+                  <th>Course</th>
+                  <th>Roster N</th>
+                  <th>% Completed</th>
+                  <th>% In Progress</th>
+                  <th>% Not Started</th>
+                </tr>
+              </thead>
+              <tbody id="executiveCourseBody"></tbody>
+            </table>
+          </div>
+          <div class="data-table-container">
+            <h3>By Lesson</h3>
+            <table class="data-table" id="executiveLessonTable">
+              <thead>
+                <tr>
+                  <th>Lesson</th>
+                  <th>Course</th>
+                  <th>Roster N</th>
+                  <th>% Completed</th>
+                  <th>% In Progress</th>
+                  <th>% Not Started</th>
+                </tr>
+              </thead>
+              <tbody id="executiveLessonBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
       <!-- User Cards -->
       <div class="user-cards-grid" id="userCards">
         <!-- User summary cards will be rendered here -->

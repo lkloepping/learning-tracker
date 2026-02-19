@@ -744,6 +744,56 @@ body {
   border-radius: 8px;
 }
 
+/* Executive Report Section */
+.executive-report-section {
+  margin-bottom: 2.5rem;
+  padding: 1.5rem;
+  background: var(--white);
+  border-radius: 12px;
+  box-shadow: var(--shadow-sm);
+}
+
+.executive-report-section .section-title {
+  margin-bottom: 1rem;
+}
+
+.executive-filters {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+}
+
+.executive-filters label {
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--charcoal-blue);
+}
+
+.executive-roster-size {
+  font-size: 0.9rem;
+  color: var(--dark-gray);
+  margin-bottom: 1.25rem;
+}
+
+.report-tables {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.report-tables h3 {
+  font-size: 1rem;
+  font-weight: 600;
+  margin-bottom: 0.75rem;
+  color: var(--charcoal-blue);
+}
+
+.report-tables .data-table-container {
+  overflow-x: auto;
+}
+
 /* Admin Dashboard Styles */
 .admin-header {
   display: flex;
