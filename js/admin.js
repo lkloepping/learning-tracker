@@ -193,7 +193,6 @@ function computeExecutiveReport() {
   // By course
   Object.keys(lessonsByCourse).forEach(courseId => {
     const courseLessons = lessonsByCourse[courseId];
-    const courseName = courseId;
     let completed = 0, inProgress = 0, notStarted = 0;
     roster.forEach(r => {
       const user = emailToUser[r.email];
