@@ -22,7 +22,7 @@
 // ============================================
 // Configuration - UPDATE THIS
 // ============================================
-const SPREADSHEET_ID = 'YOUR_SPREADSHEET_ID_HERE'; // Get this from the URL of your Google Sheet
+const SPREADSHEET_ID = '1_UE_7novwhkDpybWV1MW24H2hP9-DgyVTRTnnxygNZQ'; // Get this from the URL of your Google Sheet
 
 // Sheet names
 const USERS_SHEET = 'Users';
@@ -140,31 +140,52 @@ function getLessons() {
   const sheet = SpreadsheetApp.openById(SPREADSHEET_ID).getSheetByName(LESSONS_SHEET);
   const data = sheet.getDataRange().getValues();
   const headers = data[0];
+
+  const headerLower = (headers || []).map(h => String(h).trim().toLowerCase());
+  const idx = (name, fallback) => {
+    const i = headerLower.indexOf(name);
+    return i >= 0 ? i : fallback;
+  };
+
+  const lessonIdIdx = idx('lesson_id', 0);
+  const courseIdIdx = idx('course_id', 1);
+  const titleIdx = idx('title', 2);
+  const descriptionIdx = idx('description', 3);
+  const categoryIdx = idx('category', 4);
+  const orderIdx = idx('order', 5);
+  const linksIdx = idx('links', 6);
+  const hoursIdx = idx('lesson_hours', 7);
   
   const lessons = [];
   for (let i = 1; i < data.length; i++) {
     const row = data[i];
-    if (row[0]) { // Has lesson_id
-      // Parse links from JSON string (now in column 7, index 6)
+    if (row[lessonIdIdx]) { // Has lesson_id
+      // Parse links from JSON string
       let links = [];
-      if (row[6]) {
+      const linksCell = row[linksIdx];
+      if (linksCell) {
         try {
-          links = JSON.parse(row[6]);
+          links = JSON.parse(linksCell);
         } catch (e) {
           // If not valid JSON, try to parse as simple URL
-          links = [{ title: 'View Resource', url: row[6] }];
+          links = [{ title: 'View Resource', url: String(linksCell) }];
         }
       }
+
+      const hoursCell = row[hoursIdx];
+      const lessonHours = hoursCell !== undefined && hoursCell !== null && String(hoursCell).trim() !== ''
+        ? Number(hoursCell)
+        : 0;
       
       lessons.push({
-        id: row[0],
-        courseId: row[1],
-        title: row[2],
-        description: row[3],
-        category: row[4],
-        order: row[5] || i,
+        id: row[lessonIdIdx],
+        courseId: row[courseIdIdx],
+        title: row[titleIdx],
+        description: row[descriptionIdx],
+        category: row[categoryIdx],
+        order: row[orderIdx] || i,
         links: links,
-        lessonHours: row[7] !== undefined && row[7] !== '' ? Number(row[7]) : 0
+        lessonHours: Number.isFinite(lessonHours) ? lessonHours : 0
       });
     }
   }
