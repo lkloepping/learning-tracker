@@ -499,10 +499,16 @@ function computeTrainingHoursReport() {
 
   const lessonMeta = {};
   lessons.forEach(l => {
+    const lessonHoursRaw =
+      l.lessonHours ??
+      l.lesson_hours ??
+      l.lesson_hours ??
+      l.hours ??
+      0;
     lessonMeta[l.id] = {
       title: l.title,
       courseId: l.courseId || 'Uncategorized',
-      lessonHours: toNumber(l.lessonHours)
+      lessonHours: toNumber(lessonHoursRaw)
     };
   });
 
@@ -522,7 +528,13 @@ function computeTrainingHoursReport() {
 
   // By lesson
   const byLesson = lessons.map(l => {
-    const lessonHours = toNumber(l.lessonHours);
+    const lessonHoursRaw =
+      l.lessonHours ??
+      l.lesson_hours ??
+      l.lesson_hours ??
+      l.hours ??
+      0;
+    const lessonHours = toNumber(lessonHoursRaw);
     const completedCount = users.filter(u => u.progress?.[l.id]?.completed).length;
     const totalHours = completedCount * lessonHours;
     const course = courses.find(c => c.id === (l.courseId || ''));
