@@ -163,7 +163,8 @@ function getLessons() {
         description: row[3],
         category: row[4],
         order: row[5] || i,
-        links: links
+        links: links,
+        lessonHours: row[7] !== undefined && row[7] !== '' ? Number(row[7]) : 0
       });
     }
   }
@@ -403,13 +404,13 @@ function initializeSpreadsheet() {
   if (!lessonsSheet) {
     lessonsSheet = ss.insertSheet(LESSONS_SHEET);
   }
-  lessonsSheet.getRange(1, 1, 1, 7).setValues([['lesson_id', 'course_id', 'title', 'description', 'category', 'order', 'links']]);
+  lessonsSheet.getRange(1, 1, 1, 8).setValues([['lesson_id', 'course_id', 'title', 'description', 'category', 'order', 'links', 'lesson_hours']]);
   
   // Add sample lessons with links
-  lessonsSheet.getRange(2, 1, 3, 7).setValues([
-    ['lesson-1', 'course-1', 'Introduction to Modern Development', 'Learn the fundamentals of modern software development practices.', 'Fundamentals', 1, '[{"title":"Video: Getting Started","url":"https://www.youtube.com/watch?v=example1"}]'],
-    ['lesson-2', 'course-1', 'Building Scalable Applications', 'Discover patterns and techniques for building scalable apps.', 'Architecture', 2, '[{"title":"Guide: Best Practices","url":"https://docs.example.com/guide"}]'],
-    ['lesson-3', 'course-2', 'Advanced Design Patterns', 'Deep dive into software design patterns.', 'Patterns', 1, '[{"title":"Patterns Guide","url":"https://docs.example.com/patterns"}]']
+  lessonsSheet.getRange(2, 1, 3, 8).setValues([
+    ['lesson-1', 'course-1', 'Introduction to Modern Development', 'Learn the fundamentals of modern software development practices.', 'Fundamentals', 1, '[{"title":"Video: Getting Started","url":"https://www.youtube.com/watch?v=example1"}]', 1.0],
+    ['lesson-2', 'course-1', 'Building Scalable Applications', 'Discover patterns and techniques for building scalable apps.', 'Architecture', 2, '[{"title":"Guide: Best Practices","url":"https://docs.example.com/guide"}]', 1.5],
+    ['lesson-3', 'course-2', 'Advanced Design Patterns', 'Deep dive into software design patterns.', 'Patterns', 1, '[{"title":"Patterns Guide","url":"https://docs.example.com/patterns"}]', 2.0]
   ]);
   
   Logger.log('Spreadsheet initialized successfully!');

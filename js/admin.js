@@ -9,10 +9,12 @@ let adminData = {
   users: [],
   events: [],
   lessons: [],
+  courses: [],
   roster: []
 };
 let filteredData = [];
 let executiveReport = { byCourse: [], byLesson: [] };
+let trainingHoursReport = { byUser: [], byLesson: [], totalHours: 0 };
 
 // ============================================
 // Initialization
@@ -144,6 +146,19 @@ function processData() {
   
   // Build executive report (roster-based completion %)
   computeExecutiveReport();
+
+  // Build training-hours report (completion-only totals)
+  computeTrainingHoursReport();
+}
+
+function toNumber(value) {
+  const n = Number(value);
+  return Number.isFinite(n) ? n : 0;
+}
+
+function formatHours(value) {
+  const n = toNumber(value);
+  return n % 1 === 0 ? String(n) : n.toFixed(2);
 }
 
 /**
@@ -315,6 +330,30 @@ function renderDashboard() {
           </div>
         </div>
       </section>
+      <!-- Training Hours Report -->
+      <section class="training-hours-section" id="trainingHoursSection">
+        <h2 class="section-title">Training Hours (Completed Only)</h2>
+        <div class="executive-filters">
+          <button class="btn-export" id="exportTrainingHoursBtn">Export Training Hours (CSV)</button>
+        </div>
+        <p class="executive-roster-size" id="trainingHoursSummary"></p>
+        <div class="report-tables">
+          <div class="data-table-container">
+            <h3>Hours per Employee</h3>
+            <table class="data-table">
+              <thead><tr><th>User</th><th>Email</th><th>Completed Lessons</th><th>Total Hours</th></tr></thead>
+              <tbody id="trainingHoursByUserBody"></tbody>
+            </table>
+          </div>
+          <div class="data-table-container">
+            <h3>Hours by Lesson</h3>
+            <table class="data-table">
+              <thead><tr><th>Lesson</th><th>Course</th><th>Lesson Hours</th><th>Completed (Employees)</th><th>Total Hours</th></tr></thead>
+              <tbody id="trainingHoursByLessonBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
       <!-- User Cards -->
       <div class="user-cards-grid" id="userCards"></div>
       <!-- Data Table -->
@@ -334,6 +373,8 @@ function renderDashboard() {
       </div>
     `;
     document.getElementById('exportExecutiveBtn').addEventListener('click', exportExecutiveReport);
+    const exportHoursBtn = document.getElementById('exportTrainingHoursBtn');
+    if (exportHoursBtn) exportHoursBtn.addEventListener('click', exportTrainingHoursReport);
     const rosterStatusEl = document.getElementById('rosterStatusFilter');
     const rosterPracticeEl = document.getElementById('rosterPracticeFilter');
     if (rosterStatusEl) rosterStatusEl.addEventListener('change', () => { computeExecutiveReport(); renderExecutiveReport(); });
@@ -349,6 +390,9 @@ function renderDashboard() {
   
   // Render executive report (roster-based)
   renderExecutiveReport();
+
+  // Render training hours report
+  renderTrainingHoursReport();
   
   // Render user cards
   renderUserCards();
@@ -441,6 +485,126 @@ function populateRosterPracticeFilter() {
     option.textContent = p;
     select.appendChild(option);
   });
+}
+
+/**
+ * Compute training hours (completion-only totals).
+ * - Per employee: sum(lessonHours) for completed lessons
+ * - Per lesson: completed_count * lessonHours
+ */
+function computeTrainingHoursReport() {
+  const lessons = adminData.lessons || [];
+  const users = adminData.users || [];
+  const courses = adminData.courses || [];
+
+  const lessonMeta = {};
+  lessons.forEach(l => {
+    lessonMeta[l.id] = {
+      title: l.title,
+      courseId: l.courseId || 'Uncategorized',
+      lessonHours: toNumber(l.lessonHours)
+    };
+  });
+
+  // By user
+  const byUser = users.map(u => {
+    const completedLessonIds = Object.keys(u.progress || {}).filter(lessonId => u.progress[lessonId]?.completed);
+    const completedCount = completedLessonIds.length;
+    const totalHours = completedLessonIds.reduce((sum, lessonId) => sum + (lessonMeta[lessonId]?.lessonHours || 0), 0);
+    return {
+      userId: u.id,
+      name: u.name,
+      email: u.email || '',
+      completedCount,
+      totalHours
+    };
+  }).sort((a, b) => b.totalHours - a.totalHours);
+
+  // By lesson
+  const byLesson = lessons.map(l => {
+    const lessonHours = toNumber(l.lessonHours);
+    const completedCount = users.filter(u => u.progress?.[l.id]?.completed).length;
+    const totalHours = completedCount * lessonHours;
+    const course = courses.find(c => c.id === (l.courseId || ''));
+    return {
+      lessonId: l.id,
+      lessonTitle: l.title,
+      courseId: l.courseId || 'Uncategorized',
+      courseName: course ? course.title : (l.courseId || 'Uncategorized'),
+      lessonHours,
+      completedCount,
+      totalHours
+    };
+  }).sort((a, b) => b.totalHours - a.totalHours);
+
+  trainingHoursReport = {
+    byUser,
+    byLesson,
+    totalHours: byLesson.reduce((sum, r) => sum + r.totalHours, 0)
+  };
+}
+
+function renderTrainingHoursReport() {
+  const section = document.getElementById('trainingHoursSection');
+  if (!section) return;
+
+  const summaryEl = document.getElementById('trainingHoursSummary');
+  const byUserBody = document.getElementById('trainingHoursByUserBody');
+  const byLessonBody = document.getElementById('trainingHoursByLessonBody');
+
+  if (!byUserBody || !byLessonBody) return;
+
+  const totalUsers = (adminData.users || []).length;
+  if (summaryEl) {
+    summaryEl.textContent = `Totals reflect completions only. Users with completions: ${trainingHoursReport.byUser.filter(u => u.completedCount > 0).length}/${totalUsers}. Total completed hours: ${formatHours(trainingHoursReport.totalHours)}.`;
+  }
+
+  byUserBody.innerHTML = trainingHoursReport.byUser.map(r => `
+    <tr>
+      <td>${escapeHtml(r.name)}</td>
+      <td>${escapeHtml(r.email)}</td>
+      <td>${r.completedCount}</td>
+      <td>${formatHours(r.totalHours)}</td>
+    </tr>
+  `).join('');
+
+  byLessonBody.innerHTML = trainingHoursReport.byLesson.map(r => `
+    <tr>
+      <td>${escapeHtml(r.lessonTitle)}</td>
+      <td>${escapeHtml(r.courseName)}</td>
+      <td>${formatHours(r.lessonHours)}</td>
+      <td>${r.completedCount}</td>
+      <td>${formatHours(r.totalHours)}</td>
+    </tr>
+  `).join('');
+}
+
+function exportTrainingHoursReport() {
+  const date = new Date().toISOString().split('T')[0];
+
+  const rows = [
+    ['Training Hours Report (Completed Only)', date],
+    ['Total completed hours', formatHours(trainingHoursReport.totalHours)],
+    [],
+    ['Hours per Employee'],
+    ['User', 'Email', 'Completed lessons', 'Total hours'],
+    ...trainingHoursReport.byUser.map(r => [r.name, r.email, r.completedCount, formatHours(r.totalHours)]),
+    [],
+    ['Hours by Lesson'],
+    ['Lesson', 'Course', 'Lesson hours', 'Completed (employees)', 'Total hours'],
+    ...trainingHoursReport.byLesson.map(r => [r.lessonTitle, r.courseName, formatHours(r.lessonHours), r.completedCount, formatHours(r.totalHours)])
+  ];
+
+  const csvContent = rows.map(row =>
+    row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(',')
+  ).join('\n');
+
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = `training-hours-report-${date}.csv`;
+  link.click();
+  showToast('Training hours report exported', 'success');
 }
 
 /**
@@ -669,6 +833,9 @@ function setupEventListeners() {
   if (rosterPracticeFilter) rosterPracticeFilter.addEventListener('change', () => { computeExecutiveReport(); renderExecutiveReport(); });
   const exportExec = document.getElementById('exportExecutiveBtn');
   if (exportExec) exportExec.addEventListener('click', exportExecutiveReport);
+
+  const exportHours = document.getElementById('exportTrainingHoursBtn');
+  if (exportHours) exportHours.addEventListener('click', exportTrainingHoursReport);
 }
 
 /**

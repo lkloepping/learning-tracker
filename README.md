@@ -46,18 +46,20 @@ A beautiful, interactive learning progress tracker with Google Sheets backend fo
 | event_id | user_id | lesson_id | event_type | timestamp |
 
 **Lessons sheet** (Row 1):
-| A | B | C | D | E | F |
-|---|---|---|---|---|---|
-| lesson_id | title | description | category | order | links |
+| A | B | C | D | E | F | G | H |
+|---|---|---|---|---|---|---|---|
+| lesson_id | course_id | title | description | category | order | links | lesson_hours |
 
 ### Step 3: Add Your Lessons
 
 In the **Lessons** sheet, add your lessons starting from Row 2:
 
-| lesson_id | title | description | category | order |
-|-----------|-------|-------------|----------|-------|
-| lesson-1 | Introduction to Modern Development | Learn the fundamentals... | Fundamentals | 1 |
-| lesson-2 | Building Scalable Applications | Discover patterns... | Architecture | 2 |
+| lesson_id | course_id | title | description | category | order | links | lesson_hours |
+|-----------|-----------|-------|-------------|----------|-------|-------|-------------|
+| lesson-1 | course-1 | Introduction to Modern Development | Learn the fundamentals... | Fundamentals | 1 | [{"title":"View","url":"https://..."}] | 1.0 |
+| lesson-2 | course-1 | Building Scalable Applications | Discover patterns... | Architecture | 2 | [{"title":"View","url":"https://..."}] | 0.5 |
+
+- **lesson_hours**: decimal hours (e.g. `0.5` = 30 minutes, `1.25` = 1 hour 15 minutes). Used for the Admin “Training Hours” report.
 
 **To add more lessons later**: Just add new rows to this sheet!
 

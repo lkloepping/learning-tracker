@@ -119,6 +119,51 @@
         </div>
       </section>
 
+      <!-- Training Hours Report (completion-only) -->
+      <section class="training-hours-section" id="trainingHoursSection">
+        <h2 class="section-title">Training Hours (Completed Only)</h2>
+        <div class="executive-filters">
+          <button class="btn-export" id="exportTrainingHoursBtn">
+            <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
+              <path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd"/>
+            </svg>
+            Export Training Hours (CSV)
+          </button>
+        </div>
+        <p class="executive-roster-size" id="trainingHoursSummary"></p>
+        <div class="report-tables">
+          <div class="data-table-container">
+            <h3>Hours per Employee</h3>
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>User</th>
+                  <th>Email</th>
+                  <th>Completed Lessons</th>
+                  <th>Total Hours</th>
+                </tr>
+              </thead>
+              <tbody id="trainingHoursByUserBody"></tbody>
+            </table>
+          </div>
+          <div class="data-table-container">
+            <h3>Hours by Lesson</h3>
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Lesson</th>
+                  <th>Course</th>
+                  <th>Lesson Hours</th>
+                  <th>Completed (Employees)</th>
+                  <th>Total Hours</th>
+                </tr>
+              </thead>
+              <tbody id="trainingHoursByLessonBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
       <!-- User Cards -->
       <div class="user-cards-grid" id="userCards">
         <!-- User summary cards will be rendered here -->

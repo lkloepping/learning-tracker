@@ -753,6 +753,14 @@ body {
   box-shadow: var(--shadow-sm);
 }
 
+.training-hours-section {
+  margin-bottom: 2.5rem;
+  padding: 1.5rem;
+  background: var(--white);
+  border-radius: 12px;
+  box-shadow: var(--shadow-sm);
+}
+
 .executive-report-section .section-title {
   margin-bottom: 1rem;
 }
