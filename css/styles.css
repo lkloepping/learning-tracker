@@ -377,6 +377,28 @@ body {
   border-radius: 12px;
 }
 
+.card-req {
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 0.25rem 0.6rem;
+  border-radius: 999px;
+  border: 1px solid var(--medium-gray);
+  color: var(--charcoal-blue);
+  background: var(--light-gray);
+}
+
+.card-req.required {
+  border-color: var(--yellow);
+  background: var(--yellow-tint);
+}
+
+.card-req.optional {
+  border-color: var(--bright-blue);
+  background: var(--bright-blue-tint);
+}
+
 .card-status.not-started {
   background: var(--medium-gray);
   color: var(--dark-gray);

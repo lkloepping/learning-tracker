@@ -240,6 +240,7 @@ function getDefaultLessons() {
       description: 'Learn the fundamentals of modern software development practices, including agile methodologies and best practices. This lesson covers key concepts like version control, continuous integration, and collaborative development workflows that are essential for any modern development team.',
       category: 'Fundamentals',
       order: 1,
+      required: true,
       links: [
         { title: 'Video: Getting Started with Git', url: 'https://www.youtube.com/watch?v=example1' },
         { title: 'Documentation: Agile Principles', url: 'https://docs.example.com/agile' }
@@ -252,6 +253,7 @@ function getDefaultLessons() {
       description: 'Discover patterns and techniques for building applications that scale effectively with growing user demands. Learn about microservices architecture, load balancing, caching strategies, and database optimization techniques used by top tech companies.',
       category: 'Architecture',
       order: 2,
+      required: true,
       links: [
         { title: 'Guide: Microservices Best Practices', url: 'https://docs.example.com/microservices' },
         { title: 'GitHub: Example Architecture', url: 'https://github.com/example/scalable-app' },
@@ -265,6 +267,7 @@ function getDefaultLessons() {
       description: 'Deep dive into software design patterns that help you write maintainable, flexible, and scalable code.',
       category: 'Patterns',
       order: 1,
+      required: false,
       links: [
         { title: 'Design Patterns Guide', url: 'https://docs.example.com/patterns' }
       ]

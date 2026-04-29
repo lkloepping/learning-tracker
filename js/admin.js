@@ -179,11 +179,17 @@ function getFilteredRoster() {
   return roster;
 }
 
+function getCompletionScope() {
+  const scopeEl = document.getElementById('completionScopeFilter');
+  return scopeEl ? scopeEl.value : 'required';
+}
+
 /**
  * Compute completion rates by roster (for executive report)
  */
 function computeExecutiveReport() {
   const roster = getFilteredRoster();
+  const scope = getCompletionScope();
   const emailToUser = {};
   (adminData.users || []).forEach(u => {
     const email = (u.email || '').toString().trim().toLowerCase();
@@ -199,7 +205,14 @@ function computeExecutiveReport() {
   
   // Group lessons by course
   const lessonsByCourse = {};
-  (adminData.lessons || []).forEach(lesson => {
+  const lessonsFiltered = (adminData.lessons || []).filter(lesson => {
+    const required = lesson.required !== false;
+    if (scope === 'required') return required;
+    if (scope === 'optional') return !required;
+    return true;
+  });
+
+  lessonsFiltered.forEach(lesson => {
     const cid = lesson.courseId || 'Uncategorized';
     if (!lessonsByCourse[cid]) lessonsByCourse[cid] = [];
     lessonsByCourse[cid].push(lesson);
@@ -212,6 +225,10 @@ function computeExecutiveReport() {
     roster.forEach(r => {
       const user = emailToUser[r.email];
       if (!user) {
+        notStarted++;
+        return;
+      }
+      if (courseLessons.length === 0) {
         notStarted++;
         return;
       }
@@ -237,7 +254,7 @@ function computeExecutiveReport() {
   });
   
   // By lesson
-  (adminData.lessons || []).forEach(lesson => {
+  lessonsFiltered.forEach(lesson => {
     let completed = 0, inProgress = 0, notStarted = 0;
     roster.forEach(r => {
       const user = emailToUser[r.email];
@@ -640,10 +657,12 @@ function renderExecutiveReport() {
   if (sizeEl) {
     const practiceFilter = document.getElementById('rosterPracticeFilter');
     const statusFilter = document.getElementById('rosterStatusFilter');
+    const scope = getCompletionScope();
+    const scopeLabel = scope === 'required' ? 'Required only' : (scope === 'optional' ? 'Optional only' : 'All lessons');
     const practiceLabel = practiceFilter && practiceFilter.value ? ` Practice: ${practiceFilter.value}` : '';
     const statusLabel = statusFilter && statusFilter.value ? ` Status: ${statusFilter.value}` : '';
     const filterLabel = (practiceLabel || statusLabel) ? ` —${practiceLabel}${statusLabel}` : '';
-    sizeEl.textContent = `Roster size: ${n}${filterLabel}. Completion rates below are % of this roster.`;
+    sizeEl.textContent = `Roster size: ${n}${filterLabel}. Scope: ${scopeLabel}. Completion rates below are % of this roster.`;
   }
   
   if (courseBody) {
@@ -682,12 +701,14 @@ function renderExecutiveReport() {
 function exportExecutiveReport() {
   const practiceFilter = document.getElementById('rosterPracticeFilter');
   const statusFilter = document.getElementById('rosterStatusFilter');
+  const scope = getCompletionScope();
   const practiceLabel = practiceFilter && practiceFilter.value ? practiceFilter.value.replace(/\s+/g, '-') : 'All';
   const statusLabel = statusFilter && statusFilter.value ? statusFilter.value.replace(/\s+/g, '-') : 'All';
+  const scopeLabel = scope === 'required' ? 'Required' : (scope === 'optional' ? 'Optional' : 'All');
   const date = new Date().toISOString().split('T')[0];
   
   const rows = [
-    ['Executive Learning Report', date, 'Practice: ' + (practiceFilter && practiceFilter.value ? practiceFilter.value : 'All'), 'Status: ' + (statusFilter && statusFilter.value ? statusFilter.value : 'All'), 'Roster N: ' + (executiveReport.rosterSize || 0)],
+    ['Executive Learning Report', date, 'Practice: ' + (practiceFilter && practiceFilter.value ? practiceFilter.value : 'All'), 'Status: ' + (statusFilter && statusFilter.value ? statusFilter.value : 'All'), 'Scope: ' + scopeLabel, 'Roster N: ' + (executiveReport.rosterSize || 0)],
     [],
     ['By Course', '', '', '', ''],
     ['Course', 'Roster N', '% Completed', '% In Progress', '% Not Started'],
@@ -708,7 +729,7 @@ function exportExecutiveReport() {
   const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
   const link = document.createElement('a');
   link.href = URL.createObjectURL(blob);
-  link.download = `learning-executive-report-${date}-${practiceLabel}-${statusLabel}.csv`;
+  link.download = `learning-executive-report-${date}-${practiceLabel}-${statusLabel}-${scopeLabel}.csv`;
   link.click();
   showToast('Executive report exported', 'success');
 }
@@ -838,6 +859,9 @@ function setupEventListeners() {
   document.getElementById('statusFilter').addEventListener('change', handleFilterChange);
   document.getElementById('searchFilter').addEventListener('input', handleFilterChange);
   document.getElementById('exportBtn').addEventListener('click', exportToCSV);
+
+  const completionScope = document.getElementById('completionScopeFilter');
+  if (completionScope) completionScope.addEventListener('change', () => { computeExecutiveReport(); renderExecutiveReport(); });
   
   const rosterStatusFilter = document.getElementById('rosterStatusFilter');
   const rosterPracticeFilter = document.getElementById('rosterPracticeFilter');

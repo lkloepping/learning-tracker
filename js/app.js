@@ -12,6 +12,10 @@ let userProgress = {}; // { lessonId: { clicked: timestamp, completed: timestamp
 let currentLessonId = null; // Currently viewed lesson in modal
 let currentCourseId = null; // Currently selected course
 
+function isRequiredLesson(lesson) {
+  return lesson.required !== false;
+}
+
 // ============================================
 // Initialization
 // ============================================
@@ -181,8 +185,9 @@ function renderCourseTabs() {
   tabsContainer.style.display = 'flex';
   const tabsHTML = courses.map(course => {
     const courseLessons = lessons.filter(l => l.courseId === course.id);
-    const completedCount = courseLessons.filter(l => userProgress[l.id]?.completed).length;
-    const isComplete = courseLessons.length > 0 && completedCount === courseLessons.length;
+    const requiredLessons = courseLessons.filter(isRequiredLesson);
+    const completedCount = requiredLessons.filter(l => userProgress[l.id]?.completed).length;
+    const isComplete = requiredLessons.length > 0 && completedCount === requiredLessons.length;
     const isActive = course.id === currentCourseId;
     
     console.log(`  - Course: ${course.title} (${course.id}), Lessons: ${courseLessons.length}, Active: ${isActive}`);
@@ -192,7 +197,7 @@ function renderCourseTabs() {
               data-course-id="${course.id}"
               onclick="selectCourse('${course.id}')">
         ${escapeHtml(course.title)}
-        <span class="course-tab-progress">${completedCount}/${courseLessons.length}</span>
+        <span class="course-tab-progress">${completedCount}/${requiredLessons.length}</span>
       </button>
     `;
   }).join('');
@@ -216,12 +221,13 @@ function renderCourseHeader() {
   headerEl.style.display = 'flex';
   
   const courseLessons = lessons.filter(l => l.courseId === course.id);
-  const completedCount = courseLessons.filter(l => userProgress[l.id]?.completed).length;
-  const percentage = courseLessons.length > 0 ? Math.round((completedCount / courseLessons.length) * 100) : 0;
+  const requiredLessons = courseLessons.filter(isRequiredLesson);
+  const completedCount = requiredLessons.filter(l => userProgress[l.id]?.completed).length;
+  const percentage = requiredLessons.length > 0 ? Math.round((completedCount / requiredLessons.length) * 100) : 0;
   
   document.getElementById('courseTitle').textContent = course.title;
   document.getElementById('courseDescription').textContent = course.description || '';
-  document.getElementById('courseProgressText').textContent = `${completedCount}/${courseLessons.length} complete`;
+  document.getElementById('courseProgressText').textContent = `${completedCount}/${requiredLessons.length} required complete`;
   document.getElementById('courseProgressFill').style.width = `${percentage}%`;
 }
 
@@ -296,6 +302,7 @@ function renderLessonCard(lesson) {
     <div class="${cardClass}" data-lesson-id="${lesson.id}">
       <div class="card-header">
         ${lesson.category ? `<span class="card-category">${escapeHtml(lesson.category)}</span>` : '<span class="card-category">General</span>'}
+        <span class="card-req ${isRequiredLesson(lesson) ? 'required' : 'optional'}">${isRequiredLesson(lesson) ? 'Required' : 'Optional'}</span>
         <span class="card-status ${statusClass}">
           ${getStatusIcon(status)}
           ${status}
@@ -354,9 +361,10 @@ function updateHeaderUser() {
  * Update progress overview stats
  */
 function updateProgressOverview() {
-  const total = lessons.length;
-  const completed = lessons.filter(l => userProgress[l.id]?.completed).length;
-  const inProgress = lessons.filter(l => userProgress[l.id]?.clicked && !userProgress[l.id]?.completed).length;
+  const requiredLessons = lessons.filter(isRequiredLesson);
+  const total = requiredLessons.length;
+  const completed = requiredLessons.filter(l => userProgress[l.id]?.completed).length;
+  const inProgress = requiredLessons.filter(l => userProgress[l.id]?.clicked && !userProgress[l.id]?.completed).length;
   const notStarted = total - completed - inProgress;
   const percentage = total > 0 ? Math.round((completed / total) * 100) : 0;
   

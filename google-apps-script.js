@@ -155,6 +155,7 @@ function getLessons() {
   const orderIdx = idx('order', 5);
   const linksIdx = idx('links', 6);
   const hoursIdx = idx('lesson_hours', 7);
+  const requiredIdx = idx('required', -1);
   
   const lessons = [];
   for (let i = 1; i < data.length; i++) {
@@ -176,6 +177,14 @@ function getLessons() {
       const lessonHours = hoursCell !== undefined && hoursCell !== null && String(hoursCell).trim() !== ''
         ? Number(hoursCell)
         : 0;
+
+      const requiredCell = requiredIdx >= 0 ? row[requiredIdx] : '';
+      const requiredText = String(requiredCell).trim().toLowerCase();
+      // Default: required unless explicitly set false/no/optional
+      const required =
+        requiredText === ''
+          ? true
+          : !(requiredText === 'false' || requiredText === 'no' || requiredText === '0' || requiredText === 'optional');
       
       lessons.push({
         id: row[lessonIdIdx],
@@ -185,7 +194,8 @@ function getLessons() {
         category: row[categoryIdx],
         order: row[orderIdx] || i,
         links: links,
-        lessonHours: Number.isFinite(lessonHours) ? lessonHours : 0
+        lessonHours: Number.isFinite(lessonHours) ? lessonHours : 0,
+        required
       });
     }
   }
@@ -425,13 +435,13 @@ function initializeSpreadsheet() {
   if (!lessonsSheet) {
     lessonsSheet = ss.insertSheet(LESSONS_SHEET);
   }
-  lessonsSheet.getRange(1, 1, 1, 8).setValues([['lesson_id', 'course_id', 'title', 'description', 'category', 'order', 'links', 'lesson_hours']]);
+  lessonsSheet.getRange(1, 1, 1, 9).setValues([['lesson_id', 'course_id', 'title', 'description', 'category', 'order', 'links', 'lesson_hours', 'required']]);
   
   // Add sample lessons with links
-  lessonsSheet.getRange(2, 1, 3, 8).setValues([
-    ['lesson-1', 'course-1', 'Introduction to Modern Development', 'Learn the fundamentals of modern software development practices.', 'Fundamentals', 1, '[{"title":"Video: Getting Started","url":"https://www.youtube.com/watch?v=example1"}]', 1.0],
-    ['lesson-2', 'course-1', 'Building Scalable Applications', 'Discover patterns and techniques for building scalable apps.', 'Architecture', 2, '[{"title":"Guide: Best Practices","url":"https://docs.example.com/guide"}]', 1.5],
-    ['lesson-3', 'course-2', 'Advanced Design Patterns', 'Deep dive into software design patterns.', 'Patterns', 1, '[{"title":"Patterns Guide","url":"https://docs.example.com/patterns"}]', 2.0]
+  lessonsSheet.getRange(2, 1, 3, 9).setValues([
+    ['lesson-1', 'course-1', 'Introduction to Modern Development', 'Learn the fundamentals of modern software development practices.', 'Fundamentals', 1, '[{"title":"Video: Getting Started","url":"https://www.youtube.com/watch?v=example1"}]', 1.0, 'required'],
+    ['lesson-2', 'course-1', 'Building Scalable Applications', 'Discover patterns and techniques for building scalable apps.', 'Architecture', 2, '[{"title":"Guide: Best Practices","url":"https://docs.example.com/guide"}]', 1.5, 'required'],
+    ['lesson-3', 'course-2', 'Advanced Design Patterns', 'Deep dive into software design patterns.', 'Patterns', 1, '[{"title":"Patterns Guide","url":"https://docs.example.com/patterns"}]', 2.0, 'optional']
   ]);
   
   Logger.log('Spreadsheet initialized successfully!');
