@@ -155,7 +155,16 @@ function getLessons() {
   const orderIdx = idx('order', 5);
   const linksIdx = idx('links', 6);
   const hoursIdx = idx('lesson_hours', 7);
-  const requiredIdx = idx('required', -1);
+  const requiredIdx = (() => {
+    const candidates = ['required', 'is_required', 'required?', 'requirement', 'required_flag'];
+    for (const c of candidates) {
+      const i = headerLower.indexOf(c);
+      if (i >= 0) return i;
+    }
+    // Fallback: any header that contains the word "required"
+    const containsIdx = headerLower.findIndex(h => h.includes('required'));
+    return containsIdx >= 0 ? containsIdx : -1;
+  })();
   
   const lessons = [];
   for (let i = 1; i < data.length; i++) {
